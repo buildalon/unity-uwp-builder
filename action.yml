@@ -1,0 +1,32 @@
+name: unity-uwp-builder
+description: A GitHub Action to build Unity exported UWP projects.
+branding:
+  icon: package
+  color: blue
+inputs:
+  project-path:
+    description: The directory that contains the exported visual studio project from Unity.
+    required: true
+  configuration:
+    description: The configuration to use when building the visual studio project. Defaults to `Master`.
+    required: false
+    default: 'Master'
+  architecture:
+    description: 'The architecture to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`.'
+    required: false
+    default: 'ARM64'
+  additional-args:
+    description: Additional arguments to pass to the msbuild command.
+    required: false
+  package-type:
+    description: 'The type of package to generate. Can be: `sideload` or `upload`. Defaults to `sideload`.'
+    required: false
+    default: 'sideload'
+outputs:
+  executable:
+    description: The path to the generated executable.
+  output-directory:
+    description: The path to the output-directory.
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
