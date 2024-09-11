@@ -56,7 +56,7 @@ jobs:
         with:
           log-name: 'create-test-project'
           args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/TestProject" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
-      - run: 'openupm add com.utilities.buildpipeline'
+      - run: 'openupm add com.virtualmaker.buildalon'
         name: Add Build Pipeline Package
         working-directory: ${{ github.workspace }}/TestProject
       - uses: buildalon/unity-action@v1
