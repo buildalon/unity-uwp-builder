@@ -51,7 +51,7 @@ jobs:
           license: 'Personal'
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
-      - uses: ./ # buildalon/unity-action
+      - uses: buildalon/unity-action@v1
         name: Create Test Project
         with:
           log-name: 'create-test-project'
