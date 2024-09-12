@@ -30546,6 +30546,7 @@ const core = __nccwpck_require__(2186);
 const exec = __nccwpck_require__(1514);
 const glob = __nccwpck_require__(8090);
 const path = __nccwpck_require__(1017);
+const fs = __nccwpck_require__(7147);
 const main = async () => {
     try {
         if (process.platform !== `win32`) {
@@ -30578,7 +30579,9 @@ const main = async () => {
                 buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`, `/p:GenerateAppInstallerFile=false`, `/p:AppxPackageSigningEnabled=false`, `/p:BuildAppxUploadPackageForUap=true`);
                 break;
             case `sideload`:
-                buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`);
+                const certificatePath = await getCertificatePath();
+                const thumbprint = await getCertificateThumbprint(certificatePath);
+                buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=${thumbprint}`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
                 break;
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
@@ -30631,6 +30634,34 @@ const main = async () => {
     }
 };
 main();
+async function getCertificatePath() {
+    let certificatePath = core.getInput(`certificate-path`) || `${process.env[`GITHUB_WORKSPACE`]}/**/*.pfx`;
+    const certificateGlobber = await glob.create(certificatePath);
+    const certificateFiles = await certificateGlobber.glob();
+    switch (certificateFiles.length) {
+        case 0:
+            throw new Error(`No certificate file found. Please set the 'certificate-path' input.`);
+        default:
+            if (certificateFiles.length > 1) {
+                core.warning(`More than one certificate file found, using the first one found:\n${certificateFiles.join(`\n`)}`);
+            }
+            certificatePath = certificateFiles[0];
+    }
+    await fs.promises.access(certificatePath, fs.constants.R_OK);
+    return certificatePath;
+}
+async function getCertificateThumbprint(certificatePath) {
+    const thumbprintCmd = `powershell -command "(Get-PfxCertificate -FilePath '${certificatePath}').Thumbprint"`;
+    let thumbprint = ``;
+    await exec.exec(thumbprintCmd, [], {
+        listeners: {
+            stdout: (data) => {
+                thumbprint += data.toString();
+            }
+        }
+    });
+    return thumbprint.trim();
+}
 
 })();
 
