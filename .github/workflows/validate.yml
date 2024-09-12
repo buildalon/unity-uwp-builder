@@ -62,11 +62,13 @@ jobs:
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
         with:
+          build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Validate'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Build'
         with:
+          build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -arch ARM64'
 
