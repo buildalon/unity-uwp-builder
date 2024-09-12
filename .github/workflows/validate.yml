@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   unity-build:
-    name: '(${{ matrix.unity-version }}) ${{ matrix.build-target }}'
+    name: '(${{ matrix.unity-version }}) ${{ matrix.build-target }} - ${{ matrix.uwp-package-type }}'
     env:
       TEMPLATE_PATH: ''
       UNITY_PROJECT_PATH: '' # set by unity-setup action
@@ -24,6 +24,7 @@ jobs:
         os: [windows-latest]
         build-target: [WSAPlayer]
         unity-version: [2021.x, 2022.x, 6000.x]
+        uwp-package-type: [sideload, upload]
     steps:
       - uses: actions/checkout@v4
       - run: 'npm install -g openupm-cli'
@@ -82,7 +83,7 @@ jobs:
         id: uwp-build
         with:
           project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
-          package-type: 'upload'
+          package-type: ${{ matrix.uwp-package-type }}
 
       - name: print outputs
         shell: bash
