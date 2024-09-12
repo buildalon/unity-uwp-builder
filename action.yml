@@ -22,6 +22,9 @@ inputs:
     description: 'The type of package to generate. Can be: `sideload` or `upload`. Defaults to `sideload`.'
     required: false
     default: 'sideload'
+  certificate-path:
+    description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. If no certificate is provided, then a test certificate is created.'
+    required: false
 outputs:
   executable:
     description: The path to the generated executable.
