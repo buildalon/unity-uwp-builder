@@ -95,7 +95,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           retention-days: 1
-          name: ${{ matrix.unity-version }}-${{ matrix.build-target }}.${{ github.run_number }}
+          name: ${{ github.run_number }}.${{ github.run_attempt }} ${{ matrix.unity-version }}-${{ matrix.build-target }}-${{ matrix.uwp-package-type }}
           path: |
             ${{ github.workspace }}/**/*.log
             ${{ steps.uwp-build.outputs.output-directory }}

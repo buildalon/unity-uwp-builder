@@ -30560,6 +30560,11 @@ const main = async () => {
         }
         const buildPath = files[0];
         core.info(`Building ${buildPath}`);
+        const appPackagesPath = path.join(projectPath, `AppPackages`);
+        if (fs.existsSync(appPackagesPath)) {
+            core.info(`Cleaning AppPackages directory: ${appPackagesPath}`);
+            await fs.promises.rm(appPackagesPath, { recursive: true, force: true });
+        }
         let projectName = path.basename(buildPath, `.sln`);
         core.info(`projectName: "${projectName}"`);
         const configuration = core.getInput(`configuration`, { required: true });
@@ -30579,7 +30584,7 @@ const main = async () => {
                 buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`, `/p:GenerateAppInstallerFile=false`, `/p:AppxPackageSigningEnabled=false`, `/p:BuildAppxUploadPackageForUap=true`);
                 break;
             case `sideload`:
-                const certificatePath = await getCertificatePath();
+                const certificatePath = await getCertificatePath(projectPath);
                 const thumbprint = await getCertificateThumbprint(certificatePath);
                 buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=${thumbprint}`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
                 break;
@@ -30634,8 +30639,8 @@ const main = async () => {
     }
 };
 main();
-async function getCertificatePath() {
-    let certificatePath = core.getInput(`certificate-path`) || `${process.env[`GITHUB_WORKSPACE`]}/**/*.pfx`;
+async function getCertificatePath(projectPath) {
+    let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
     const certificateGlobber = await glob.create(certificatePath);
     const certificateFiles = await certificateGlobber.glob();
     switch (certificateFiles.length) {
