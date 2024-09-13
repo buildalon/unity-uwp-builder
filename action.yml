@@ -1,8 +1,8 @@
-name: unity-uwp-builder
+name: Buildalon unity-uwp-builder
 description: A GitHub Action to build Unity exported UWP projects.
 branding:
   icon: package
-  color: blue
+  color: red
 inputs:
   project-path:
     description: The directory that contains the exported visual studio project from Unity.
