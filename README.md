@@ -12,9 +12,6 @@ A GitHub Action to build Unity exported UWP projects.
 ```yaml
 steps:
   # required for unity-uwp-builder action
-  - uses: actions/setup-dotnet@v4
-    with:
-      dotnet-version: '8.x'
   - uses: microsoft/setup-msbuild@v2
 
   - uses: buildalon/unity-uwp-builder@v1
