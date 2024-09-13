@@ -42,4 +42,4 @@ steps:
 ### outputs
 
 - `executable`: The path to the generated appx executable.
-- `export-path`: The path to the export directory.
+- `output-directory`: The path to the package output directory.
