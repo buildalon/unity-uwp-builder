@@ -72,10 +72,6 @@ jobs:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ARM64'
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.x'
       - uses: microsoft/setup-msbuild@v2
 
         # builds visual studio project for UWP and packages it as an appx
