@@ -1,0 +1,101 @@
+name: validate
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '*'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unity-build:
+    name: '(${{ matrix.unity-version }}) ${{ matrix.build-target }} - ${{ matrix.uwp-package-type }}'
+    env:
+      TEMPLATE_PATH: ''
+      UNITY_PROJECT_PATH: '' # set by unity-setup action
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        build-target: [WSAPlayer]
+        unity-version: [2021.x, 2022.x, 6000.x]
+        uwp-package-type: [sideload, upload]
+    steps:
+      - uses: actions/checkout@v4
+      - run: 'npm install -g openupm-cli'
+        # Installs the Unity Editor based on your project version text file
+        # sets -> env.UNITY_EDITOR_PATH
+        # sets -> env.UNITY_PROJECT_PATH
+      - uses: buildalon/unity-setup@v1
+        with:
+          version-file: 'None'
+          build-targets: ${{ matrix.build-target }}
+          unity-version: ${{ matrix.unity-version }}
+      - name: Find Unity Template Path
+        run: |
+          $rootPath = $env:UNITY_EDITOR_PATH -replace "Editor.*", ""
+          Write-Host "ROOT_PATH=$rootPath"
+          $templatePath = Get-ChildItem -Recurse -Filter "com.unity.template.3d*.tgz" -Path $rootPath | Select-Object -First 1 | Select-Object -ExpandProperty FullName
+          Write-Host "TEMPLATE_PATH=$templatePath"
+          echo "TEMPLATE_PATH=$templatePath" >> $env:GITHUB_ENV
+          $projectPath = "${{ github.workspace }}/TestProject"
+          echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
+        shell: pwsh
+        # Activates the installation with the provided credentials
+      - uses: buildalon/activate-unity-license@v1
+        with:
+          license: 'Personal'
+          username: ${{ secrets.UNITY_USERNAME }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+      - uses: buildalon/unity-action@v1
+        name: Create Test Project
+        with:
+          log-name: 'create-test-project'
+          args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/TestProject" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
+      - run: 'openupm add com.virtualmaker.buildalon'
+        name: Add Build Pipeline Package
+        working-directory: ${{ github.workspace }}/TestProject
+      - uses: buildalon/unity-action@v1
+        name: '${{ matrix.build-target }}-Validate'
+        with:
+          build-target: ${{ matrix.build-target }}
+          log-name: '${{ matrix.build-target }}-Validate'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
+      - uses: buildalon/unity-action@v1
+        name: '${{ matrix.build-target }}-Build'
+        with:
+          build-target: ${{ matrix.build-target }}
+          log-name: '${{ matrix.build-target }}-Build'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ARM64'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+      - uses: microsoft/setup-msbuild@v2
+
+        # builds visual studio project for UWP and packages it as an appx
+      - uses: ./ # buildalon/unity-uwp-builder
+        id: uwp-build
+        with:
+          project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
+          package-type: ${{ matrix.uwp-package-type }}
+
+      - name: print outputs
+        shell: bash
+        run: |
+          echo "Executable: ${{ steps.uwp-build.outputs.executable }}"
+          echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
+          ls -R "${{ steps.uwp-build.outputs.output-directory }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: ${{ github.run_number }}.${{ github.run_attempt }} ${{ matrix.unity-version }}-${{ matrix.build-target }}-${{ matrix.uwp-package-type }}
+          path: |
+            ${{ github.workspace }}/**/*.log
+            ${{ steps.uwp-build.outputs.output-directory }}
