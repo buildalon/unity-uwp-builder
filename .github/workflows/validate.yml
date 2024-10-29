@@ -56,10 +56,10 @@ jobs:
         name: Create Test Project
         with:
           log-name: 'create-test-project'
-          args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/TestProject" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
+          args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
       - run: 'openupm add com.virtualmaker.buildalon'
         name: Add Build Pipeline Package
-        working-directory: ${{ github.workspace }}/TestProject
+        working-directory: ${{ env.UNITY_PROJECT_PATH }}
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
         with:
