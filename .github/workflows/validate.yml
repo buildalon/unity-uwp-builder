@@ -43,7 +43,7 @@ jobs:
           $templatePath = Get-ChildItem -Recurse -Filter "com.unity.template.3d*.tgz" -Path $rootPath | Select-Object -First 1 | Select-Object -ExpandProperty FullName
           Write-Host "TEMPLATE_PATH=$templatePath"
           echo "TEMPLATE_PATH=$templatePath" >> $env:GITHUB_ENV
-          $projectPath = "${{ github.workspace }}/TestProject"
+          $projectPath = "${{ github.workspace }}/Test Project"
           echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
         shell: pwsh
         # Activates the installation with the provided credentials
@@ -56,10 +56,10 @@ jobs:
         name: Create Test Project
         with:
           log-name: 'create-test-project'
-          args: '-quit -nographics -batchmode -createProject "${{ github.workspace }}/TestProject" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
+          args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
       - run: 'openupm add com.virtualmaker.buildalon'
         name: Add Build Pipeline Package
-        working-directory: ${{ github.workspace }}/TestProject
+        working-directory: ${{ env.UNITY_PROJECT_PATH }}
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
         with:

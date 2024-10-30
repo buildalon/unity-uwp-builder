@@ -62,7 +62,7 @@ const main = async () => {
         if (!core.isDebug()) {
             buildArgs.push(`/verbosity:minimal`);
         }
-        await exec.exec(`msbuild`, [buildPath, ...buildArgs], {
+        await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
             windowsVerbatimArguments: true
         });
         const outputDirectory = path.join(projectPath, `AppPackages`);
