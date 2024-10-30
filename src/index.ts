@@ -8,10 +8,19 @@ const main = async () => {
     try {
         if (process.platform !== `win32`) { throw new Error(`This action can only run on Windows runner.`); }
         const projectPath = core.getInput(`project-path`, { required: true });
-        const globber = await glob.create(path.join(projectPath, `**/*.sln`));
-        const files = await globber.glob();
-        if (files.length === 0) { throw new Error(`No solution file found.`); }
-        const buildPath = files[0];
+        let buildPath = null;
+        if (!fs.existsSync(projectPath)) {
+            const globber = await glob.create(path.join(projectPath, `**/*.sln`));
+            const files = await globber.glob();
+            if (files.length === 0) { throw new Error(`No solution file found.`); }
+            buildPath = files[0];
+        }
+        else {
+            buildPath = projectPath;
+        }
+        if (!buildPath) {
+            throw new Error(`No solution file found.`);
+        }
         core.info(`Building ${buildPath}`);
         const appPackagesPath = path.join(projectPath, `AppPackages`);
         if (fs.existsSync(appPackagesPath)) {
