@@ -22,6 +22,7 @@ const main = async () => {
             buildPath = files[0];
         }
         core.info(`Building ${buildPath}`);
+        projectPath = path.dirname(buildPath);
         try {
             await fs.promises.access(buildPath, fs.constants.R_OK);
         } catch (error) {
