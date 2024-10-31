@@ -119,18 +119,25 @@ main();
 
 async function getCertificatePath(projectPath: string): Promise<string> {
     let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
-    const certificateGlobber = await glob.create(certificatePath);
-    const certificateFiles = await certificateGlobber.glob();
-    switch (certificateFiles.length) {
-        case 0:
-            throw new Error(`No certificate file found. Please set the 'certificate-path' input.`);
-        default:
-            if (certificateFiles.length > 1) {
-                core.warning(`More than one certificate file found, using the first one found:\n${certificateFiles.join(`\n`)}`);
-            }
-            certificatePath = certificateFiles[0];
+    core.info(`certificatePath: "${certificatePath}"`);
+    if (!certificatePath.endsWith(`**/*.pfx`)) {
+        certificatePath = path.join(certificatePath, `**/*.pfx`);
     }
-    await fs.promises.access(certificatePath, fs.constants.R_OK);
+    if (certificatePath.includes(`*`)) {
+        const certificateGlobber = await glob.create(certificatePath);
+        const certificateFiles = await certificateGlobber.glob();
+        core.info(`Found certificate files:`);
+        certificateFiles.forEach(file => core.info(`  - "${file}"`));
+        if (certificateFiles.length === 0) {
+            throw new Error(`No certificate file found: "${certificatePath}"`);
+        }
+        certificatePath = certificateFiles[0];
+    }
+    try {
+        await fs.promises.access(certificatePath, fs.constants.R_OK);
+    } catch (error) {
+        throw new Error(`Certificate file not found: "${certificatePath}"`);
+    }
     return certificatePath;
 }
 
