@@ -30552,16 +30552,27 @@ const main = async () => {
         if (process.platform !== `win32`) {
             throw new Error(`This action can only run on Windows runner.`);
         }
-        const projectPath = core.getInput(`project-path`, { required: true });
+        let projectPath = core.getInput(`project-path`, { required: true });
         core.info(`projectPath: "${projectPath}"`);
-        const resolvedPath = path.resolve(projectPath);
-        const globber = await glob.create(path.join(resolvedPath, `**/*.sln`));
-        const files = await globber.glob();
-        if (files.length === 0) {
-            throw new Error(`No solution file found.`);
+        if (!projectPath.endsWith(`**/*.sln`)) {
+            projectPath = path.join(projectPath, `**/*.sln`);
         }
-        const buildPath = files[0];
+        let buildPath = projectPath;
+        if (projectPath.includes('**/*.sln')) {
+            const globber = await glob.create(projectPath);
+            const files = await globber.glob();
+            if (files.length === 0) {
+                throw new Error(`No solution file found.`);
+            }
+            buildPath = files[0];
+        }
         core.info(`Building ${buildPath}`);
+        try {
+            await fs.promises.access(buildPath, fs.constants.R_OK);
+        }
+        catch (error) {
+            throw new Error(`Solution file not found: "${buildPath}"`);
+        }
         const appPackagesPath = path.join(projectPath, `AppPackages`);
         if (fs.existsSync(appPackagesPath)) {
             core.info(`Cleaning AppPackages directory: ${appPackagesPath}`);
