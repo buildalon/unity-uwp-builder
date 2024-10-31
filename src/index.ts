@@ -13,9 +13,11 @@ const main = async () => {
             projectPath = path.join(projectPath, `**/*.sln`);
         }
         let buildPath = projectPath;
-        if (projectPath.includes('**/*.sln')) {
-            const globber = await glob.create(projectPath);
+        if (projectPath.includes('*')) {
+            const globber = await glob.create(projectPath, { matchDirectories: false });
             const files = await globber.glob();
+            core.info(`Found solution files:`);
+            files.forEach(file => core.info(`  - "${file}"`));
             if (files.length === 0) { throw new Error(`No solution file found.`); }
             buildPath = files[0];
         }
