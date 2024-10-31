@@ -8,7 +8,7 @@ const main = async () => {
     try {
         if (process.platform !== `win32`) { throw new Error(`This action can only run on Windows runner.`); }
         let projectPath = core.getInput(`project-path`, { required: true });
-        core.info(`projectPath: "${projectPath}"`);
+        core.debug(`project-path: "${projectPath}"`);
         if (!projectPath.endsWith(`.sln`)) {
             projectPath = path.join(projectPath, `**/*.sln`);
         }
@@ -16,12 +16,12 @@ const main = async () => {
         if (projectPath.includes('*')) {
             const globber = await glob.create(projectPath, { matchDirectories: false });
             const files = await globber.glob();
-            core.info(`Found solution files:`);
-            files.forEach(file => core.info(`  - "${file}"`));
+            core.debug(`Found solution files:`);
+            files.forEach(file => core.debug(`  - "${file}"`));
             if (files.length === 0) { throw new Error(`No solution file found.`); }
             buildPath = files[0];
         }
-        core.info(`Building ${buildPath}`);
+        core.info(`Building ${buildPath}...`);
         projectPath = path.dirname(buildPath);
         try {
             await fs.promises.access(buildPath, fs.constants.R_OK);
@@ -30,11 +30,11 @@ const main = async () => {
         }
         const appPackagesPath = path.join(projectPath, `AppPackages`);
         if (fs.existsSync(appPackagesPath)) {
-            core.info(`Cleaning AppPackages directory: ${appPackagesPath}`);
+            core.info(`Cleaning AppPackages directory: ${appPackagesPath}...`);
             await fs.promises.rm(appPackagesPath, { recursive: true, force: true });
         }
         let projectName = path.basename(buildPath, `.sln`);
-        core.info(`projectName: "${projectName}"`);
+        core.debug(`projectName: "${projectName}"`);
         const configuration = core.getInput(`configuration`, { required: true });
         const buildArgs = [
             `/t:Build`,
@@ -42,11 +42,11 @@ const main = async () => {
         ];
         const architecture = core.getInput(`architecture`);
         if (architecture) {
-            core.info(`architecture: "${architecture}"`);
+            core.debug(`architecture: "${architecture}"`);
             buildArgs.push(`/p:Platform=${architecture}`);
         }
         const packageType = core.getInput(`package-type`, { required: true });
-        core.info(`package-type: "${packageType}"`);
+        core.debug(`package-type: "${packageType}"`);
         switch (packageType) {
             case `upload`:
                 buildArgs.push(
@@ -71,7 +71,7 @@ const main = async () => {
         }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
-            core.info(`additional-args: "${additionalArgs}"`);
+            core.debug(`additional-args: "${additionalArgs}"`);
             buildArgs.push(...additionalArgs.split(` `));
         }
         if (!core.isDebug()) {
@@ -81,7 +81,7 @@ const main = async () => {
             windowsVerbatimArguments: true
         });
         const outputDirectory = path.join(projectPath, `AppPackages`);
-        core.info(`outputDirectory: ${outputDirectory}`);
+        core.debug(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
         const patterns = [
             `${outputDirectory}/**/*.appx`,
@@ -98,8 +98,8 @@ const main = async () => {
             core.warning(`No executables found.`);
             return;
         }
-        core.info(`Found executables:`);
-        executables.forEach(executable => core.info(`  - "${executable}"`));
+        core.debug(`Found executables:`);
+        executables.forEach(executable => core.debug(`  - "${executable}"`));
         let executable: string;
         switch (packageType) {
             case `upload`:
@@ -109,7 +109,7 @@ const main = async () => {
                 executable = executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
                 break;
         }
-        core.info(`Found executable: "${executable}"`);
+        core.debug(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);
     } catch (error) {
         core.setFailed(error);
@@ -120,15 +120,15 @@ main();
 
 async function getCertificatePath(projectPath: string): Promise<string> {
     let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
-    core.info(`certificatePath: "${certificatePath}"`);
+    core.debug(`certificatePath: "${certificatePath}"`);
     if (!certificatePath.endsWith(`.pfx`)) {
         certificatePath = path.join(certificatePath, `**/*.pfx`);
     }
     if (certificatePath.includes(`*`)) {
         const certificateGlobber = await glob.create(certificatePath);
         const certificateFiles = await certificateGlobber.glob();
-        core.info(`Found certificate files:`);
-        certificateFiles.forEach(file => core.info(`  - "${file}"`));
+        core.debug(`Found certificate files:`);
+        certificateFiles.forEach(file => core.debug(`  - "${file}"`));
         if (certificateFiles.length === 0) {
             throw new Error(`No certificate file found: "${certificatePath}"`);
         }
