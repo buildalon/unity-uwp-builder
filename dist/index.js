@@ -30554,7 +30554,7 @@ const main = async () => {
         }
         let projectPath = core.getInput(`project-path`, { required: true });
         core.info(`projectPath: "${projectPath}"`);
-        if (!projectPath.endsWith(`**/*.sln`)) {
+        if (!projectPath.endsWith(`.sln`)) {
             projectPath = path.join(projectPath, `**/*.sln`);
         }
         let buildPath = projectPath;
@@ -30657,7 +30657,7 @@ main();
 async function getCertificatePath(projectPath) {
     let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
     core.info(`certificatePath: "${certificatePath}"`);
-    if (!certificatePath.endsWith(`**/*.pfx`)) {
+    if (!certificatePath.endsWith(`.pfx`)) {
         certificatePath = path.join(certificatePath, `**/*.pfx`);
     }
     if (certificatePath.includes(`*`)) {

@@ -9,7 +9,7 @@ const main = async () => {
         if (process.platform !== `win32`) { throw new Error(`This action can only run on Windows runner.`); }
         let projectPath = core.getInput(`project-path`, { required: true });
         core.info(`projectPath: "${projectPath}"`);
-        if (!projectPath.endsWith(`**/*.sln`)) {
+        if (!projectPath.endsWith(`.sln`)) {
             projectPath = path.join(projectPath, `**/*.sln`);
         }
         let buildPath = projectPath;
@@ -120,7 +120,7 @@ main();
 async function getCertificatePath(projectPath: string): Promise<string> {
     let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
     core.info(`certificatePath: "${certificatePath}"`);
-    if (!certificatePath.endsWith(`**/*.pfx`)) {
+    if (!certificatePath.endsWith(`.pfx`)) {
         certificatePath = path.join(certificatePath, `**/*.pfx`);
     }
     if (certificatePath.includes(`*`)) {
