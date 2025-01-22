@@ -1,6 +1,6 @@
 {
   "name": "unity-uwp-builder",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A GitHub Action to build Unity exported UWP projects.",
   "author": "buildalon",
   "license": "MIT",
