@@ -58,18 +58,13 @@ const main = async () => {
                 break;
             case `sideload`:
                 const certificatePath = await getCertificatePath(projectPath);
-                const thumbprint = await getCertificateThumbprint(certificatePath);
+                // https://learn.microsoft.com/en-us/windows/uwp/packaging/auto-build-package-uwp-apps
                 buildArgs.push(
                     `/p:UapAppxPackageBuildMode=SideloadOnly`,
                     `/p:AppxPackageSigningEnabled=true`,
-                    `/p:PackageCertificateThumbprint=${thumbprint}`,
-                    `/p:PackageCertificateKeyFile="${certificatePath}"`
+                    `/p:PackageCertificateThumbprint=""`, // The PackageCertificateThumbprint argument is intentionally set to an empty string as a precaution. If the thumbprint is set in the project but does not match the signing certificate, the build will fail with the error: Certificate does not match supplied signing thumbprint.
+                    `/p:PackageCertificateKeyFile="${certificatePath}"`,
                 );
-                const certificatePassword = core.getInput(`certificate-password`);
-                if (certificatePassword) {
-                    core.debug(`certificate-password: "${certificatePassword}"`);
-                    buildArgs.push(`/p:PackageCertificatePassword=${certificatePassword}`);
-                }
                 break;
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
@@ -100,12 +95,11 @@ const main = async () => {
         const executableGlobber = await glob.create(patterns.join(`\n`));
         const executables = await executableGlobber.glob();
         if (executables.length === 0) {
-            core.warning(`No executables found.`);
-            return;
+            throw new Error(`No executable file found in "${outputDirectory}".`);
         }
         core.debug(`Found executables:`);
         executables.forEach(executable => core.debug(`  - "${executable}"`));
-        let executable: string;
+        let executable: string | undefined;
         switch (packageType) {
             case `upload`:
                 executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
@@ -113,6 +107,9 @@ const main = async () => {
             case `sideload`:
                 executable = executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
                 break;
+        }
+        if (!executable) {
+            throw new Error(`No matching executable found for package type "${packageType}".`);
         }
         core.debug(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);
