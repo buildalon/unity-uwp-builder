@@ -73,21 +73,18 @@ jobs:
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ARM64'
       - uses: microsoft/setup-msbuild@v2
-
         # builds visual studio project for UWP and packages it as an appx
       - uses: ./ # buildalon/unity-uwp-builder
         id: uwp-build
         with:
           project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
           package-type: ${{ matrix.uwp-package-type }}
-
       - name: print outputs
         shell: bash
         run: |
           echo "Executable: ${{ steps.uwp-build.outputs.executable }}"
           echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
           ls -R "${{ steps.uwp-build.outputs.output-directory }}"
-
       - uses: actions/upload-artifact@v4
         with:
           retention-days: 1

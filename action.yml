@@ -25,6 +25,9 @@ inputs:
   certificate-path:
     description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate.'
     required: false
+  certificate-password:
+    description: 'The password for the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate password.'
+    required: false
 outputs:
   executable:
     description: The path to the generated executable.

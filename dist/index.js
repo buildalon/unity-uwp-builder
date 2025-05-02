@@ -30619,6 +30619,11 @@ const main = async () => {
                 const certificatePath = await getCertificatePath(projectPath);
                 const thumbprint = await getCertificateThumbprint(certificatePath);
                 buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=${thumbprint}`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
+                const certificatePassword = core.getInput(`certificate-password`);
+                if (certificatePassword) {
+                    core.debug(`certificate-password: "${certificatePassword}"`);
+                    buildArgs.push(`/p:PackageCertificatePassword=${certificatePassword}`);
+                }
                 break;
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
