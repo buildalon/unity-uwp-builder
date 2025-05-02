@@ -30188,18 +30188,6 @@ async function getCertificatePath(projectPath) {
     }
     return certificatePath;
 }
-async function getCertificateThumbprint(certificatePath) {
-    const thumbprintCmd = `powershell -command "(Get-PfxCertificate -FilePath '${certificatePath}').Thumbprint"`;
-    let thumbprint = ``;
-    await exec.exec(thumbprintCmd, [], {
-        listeners: {
-            stdout: (data) => {
-                thumbprint += data.toString();
-            }
-        }
-    });
-    return thumbprint.trim();
-}
 
 })();
 
