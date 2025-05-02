@@ -30107,7 +30107,7 @@ const main = async () => {
                 const certificatePath = await getCertificatePath(projectPath);
                 buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
                 const certificatePassword = core.getInput(`certificate-password`);
-                if (certificatePassword && certificatePassword.length > 0 && certificatePassword !== '') {
+                if (certificatePassword) {
                     buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
                 }
                 break;
