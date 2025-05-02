@@ -66,7 +66,7 @@ const main = async () => {
                     `/p:PackageCertificateKeyFile="${certificatePath}"`,
                 );
                 const certificatePassword = core.getInput(`certificate-password`);
-                if (certificatePassword && certificatePassword.length > 0 && certificatePassword !== '') {
+                if (certificatePassword) {
                     buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
                 }
                 break;
