@@ -65,6 +65,10 @@ const main = async () => {
                     `/p:PackageCertificateThumbprint=""`, // The PackageCertificateThumbprint argument is intentionally set to an empty string as a precaution. If the thumbprint is set in the project but does not match the signing certificate, the build will fail with the error: Certificate does not match supplied signing thumbprint.
                     `/p:PackageCertificateKeyFile="${certificatePath}"`,
                 );
+                const certificatePassword = core.getInput(`certificate-password`);
+                if (certificatePassword && certificatePassword.length > 0 && certificatePassword !== '') {
+                    buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
+                }
                 break;
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
