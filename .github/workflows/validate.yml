@@ -24,9 +24,12 @@ jobs:
   unity-build:
     needs: setup
     name: '(${{ matrix.unity-version }}) ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.uwp-package-type }} ${{ matrix.uwp-package-format }} ${{ matrix.certificate-type }}'
-    runs-on: ${{ matrix.os }}
     permissions:
-      contents: read
+      contents: write
     strategy:
       fail-fast: false
       matrix: ${{ needs.setup.outputs.jobs && fromJSON(needs.setup.outputs.jobs) }}
+    uses: ./.github/workflows/build.yml
+    with:
+      strategy: ${{ toJSON(matrix.strategy) }}
+    secrets: inherit
