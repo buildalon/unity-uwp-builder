@@ -21,10 +21,28 @@ jobs:
         run: ./.github/workflows/scripts/setup-matrix.sh
     outputs:
       matrix: ${{ steps.setup-jobs.outputs.matrix }}
-  unity-build:
+  validate:
+    name: Validate Matrix
+    needs: setup
+    if: needs.setup.outputs.matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Matrix
+        run: echo "Matrix is valid"
+      - name: Display Matrix
+        run: |
+          MATRIX="${{ needs.setup.outputs.matrix }}"
+          if [ -z "$MATRIX" ]; then
+            echo "❌ matrix not found"
+            exit 1
+          else
+            echo "✅ Matrix found:"
+            echo "Matrix: $MATRIX"
+          fi
+  build:
     if: needs.setup.outputs.matrix
     needs: setup
-    name: Validate
+    name: Build
     strategy:
       matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
       fail-fast: false
