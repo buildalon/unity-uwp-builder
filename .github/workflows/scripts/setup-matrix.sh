@@ -20,8 +20,8 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
             for UWP_PACKAGE_TYPE in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-type"[]'); do
                 for UWP_PACKAGE_FORMAT in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-format"[]'); do
                     for CERTIFICATE_TYPE in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]'); do
-                        # create a job object
                         JOB=$(jq -c -n \
+                            --arg name "($UNITY_VERSION) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $UWP_PACKAGE_FORMAT $CERTIFICATE_TYPE" \
                             --arg unity_version "$UNITY_VERSION" \
                             --arg uwp_arch "$UWP_ARCH" \
                             --arg uwp_subtarget "$UWP_SUBTARGET" \
@@ -29,7 +29,7 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
                             --arg uwp_package_format "$UWP_PACKAGE_FORMAT" \
                             --arg certificate_type "$CERTIFICATE_TYPE" \
                             '{
-                                "name": "($unity_version) $uwp_arch $uwp_subtarget $uwp_package_type $uwp_package_format $certificate_type",
+                                "name": $name,
                                 "os": "windows-latest",
                                 "build-target": "WSAPlayer",
                                 "unity-version": $unity_version,
@@ -69,11 +69,18 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
 
 done
 
-# Join arrays with comma, no newlines, and output as a single line
-INCLUDE_JOINED=$(IFS=,; echo "${INCLUDED_JOBS[*]}")
-EXCLUDE_JOINED=$(IFS=,; echo "${EXCLUDED_JOBS[*]}")
-JOBS_JSON="{\"include\": [${INCLUDE_JOINED}], \"exclude\": [${EXCLUDE_JOINED}]}"
-# show json debug
-echo "strategy:"
+# { matrix: { include: [...], exclude: [...] }, fail-fast: false }
+JOBS_JSON=$(jq -c -n \
+    --argjson include "$(printf '%s\n' "${INCLUDED_JOBS[@]}" | jq -s .)" \
+    --argjson exclude "$(printf '%s\n' "${EXCLUDED_JOBS[@]}" | jq -s .)" \
+    '{
+        matrix: {
+            include: $include,
+            exclude: $exclude
+        },
+        "fail-fast": false
+    }')
+# print the jobs JSON to the console for debugging pretty print
+echo "Generated jobs JSON:"
 echo "$JOBS_JSON" | jq .
 echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"
