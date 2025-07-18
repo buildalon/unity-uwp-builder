@@ -25,9 +25,6 @@ jobs:
     if: needs.setup.outputs.matrix
     needs: setup
     name: Validate
-    strategy:
-      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
-      fail-fast: false
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
