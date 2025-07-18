@@ -20,13 +20,15 @@ jobs:
         shell: bash
         run: ./.github/workflows/scripts/setup-matrix.sh
     outputs:
-      jobs: ${{ steps.setup-jobs.outputs.jobs }}
+      matrix: ${{ steps.setup-jobs.outputs.matrix }}
   unity-build:
-    if: needs.setup.outputs.jobs
+    if: needs.setup.outputs.matrix
     needs: setup
-    name: ${{ matrix.name || 'Build' }}
-    strategy: ${{ fromJSON(needs.setup.outputs.jobs) || '' }}
+    name: Validate
+    strategy:
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+      fail-fast: false
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      strategy: ${{ toJSON(matrix.strategy) }}
+      matrix: ${{ toJSON(matrix.matrix) }}

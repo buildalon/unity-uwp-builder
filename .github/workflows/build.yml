@@ -4,7 +4,7 @@ permissions:
 on:
   workflow_call:
     inputs:
-      strategy:
+      matrix:
         required: true
         type: string
     secrets:
@@ -15,7 +15,9 @@ on:
 jobs:
   build:
     name: ${{ matrix.name }}
-    strategy: ${{ fromJSON(inputs.strategy) }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.matrix) }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write

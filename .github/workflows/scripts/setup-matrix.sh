@@ -66,21 +66,16 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
             done
         done
     done
-
 done
 
-# { matrix: { include: [...], exclude: [...] }, fail-fast: false }
-JOBS_JSON=$(jq -c -n \
+# { include: [...], exclude: [...] }
+MATRIX_JSON=$(jq -c -n \
     --argjson include "$(printf '%s\n' "${INCLUDED_JOBS[@]}" | jq -s .)" \
     --argjson exclude "$(printf '%s\n' "${EXCLUDED_JOBS[@]}" | jq -s .)" \
     '{
-        matrix: {
-            include: $include,
-            exclude: $exclude
-        },
-        "fail-fast": false
+        include: $include,
+        exclude: $exclude
     }')
-# print the jobs JSON to the console for debugging pretty print
 echo "Generated jobs JSON:"
-echo "$JOBS_JSON" | jq .
-echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"
+echo "$MATRIX_JSON" | jq .
+echo "matrix=${MATRIX_JSON}" >> "$GITHUB_OUTPUT"
