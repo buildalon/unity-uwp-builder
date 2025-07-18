@@ -1,0 +1,18 @@
+#!/bin/bash
+MATRIX_JSON=$(jq -c . <<'EOF'
+{
+  "os": ["windows-latest"],
+  "build-target": ["WSAPlayer"],
+  "unity-version": ["2021.x", "2022.x", "6000.x"],
+  "uwp-arch": ["x64", "ARM64"],
+  "uwp-subtarget": ["PC", "HoloLens"],
+  "uwp-package-type": ["sideload", "upload"],
+  "uwp-package-format": ["appx", "msix"],
+  "certificate-type": ["default", "custom"],
+  "exclude": [
+    {"uwp-package-type": "upload", "certificate-type": "custom"}
+  ]
+}
+EOF
+)
+echo \"matrix="${MATRIX_JSON}"\" >> "$GITHUB_OUTPUT"

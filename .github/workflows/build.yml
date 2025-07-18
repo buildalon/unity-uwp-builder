@@ -1,0 +1,167 @@
+name: Build
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      strategy:
+        required: true
+        type: string
+    secrets:
+      UNITY_EMAIL:
+        required: true
+      UNITY_PASSWORD:
+        required: true
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy: ${{ fromJSON(inputs.strategy) }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    env:
+      TEMPLATE_PATH: ''
+      UNITY_PROJECT_PATH: '' # set by unity-setup action
+    steps:
+      - uses: actions/checkout@v4
+      - run: 'npm install -g openupm-cli'
+        # Installs the Unity Editor based on your project version text file
+        # sets -> env.UNITY_EDITOR_PATH
+        # sets -> env.UNITY_PROJECT_PATH
+      - uses: buildalon/unity-setup@v1
+        with:
+          version-file: 'None'
+          build-targets: ${{ matrix.build-target }}
+          unity-version: ${{ matrix.unity-version }}
+      - name: Find Unity Template Path
+        run: |
+          $rootPath = $env:UNITY_EDITOR_PATH -replace "Editor.*", ""
+          Write-Host "ROOT_PATH=$rootPath"
+          $templatePath = Get-ChildItem -Recurse -Filter "com.unity.template.3d*.tgz" -Path $rootPath | Select-Object -First 1 | Select-Object -ExpandProperty FullName
+          Write-Host "TEMPLATE_PATH=$templatePath"
+          echo "TEMPLATE_PATH=$templatePath" >> $env:GITHUB_ENV
+          $projectPath = "${{ github.workspace }}/Test Project"
+          echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
+        shell: pwsh
+        # Activates the installation with the provided credentials
+      - uses: buildalon/activate-unity-license@v1
+        with:
+          license: 'Personal'
+          username: ${{ secrets.UNITY_USERNAME }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+      - uses: buildalon/unity-action@v1
+        name: Create Test Project
+        with:
+          log-name: 'create-test-project'
+          args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
+      - run: 'openupm add com.virtualmaker.buildalon'
+        name: Add Build Pipeline Package
+        working-directory: ${{ env.UNITY_PROJECT_PATH }}
+      - uses: buildalon/unity-action@v1
+        name: '${{ matrix.build-target }}-Validate'
+        with:
+          build-target: ${{ matrix.build-target }}
+          log-name: '${{ matrix.build-target }}-Validate'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
+      - uses: buildalon/unity-action@v1
+        name: '${{ matrix.build-target }}-Build'
+        with:
+          build-target: ${{ matrix.build-target }}
+          log-name: '${{ matrix.build-target }}-Build'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK 10.0.22621.0'
+      - uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[15.0, )'
+      # Create a test certificate for custom certificate testing
+      - name: Create Test Certificate
+        if: matrix.certificate-type == 'custom'
+        run: |
+          $certPath = "${{ github.workspace }}/TestCert.pfx"
+          $certPassword = "TestPassword123"
+
+          # Create a self-signed certificate for testing
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=TestPublisher" -KeyUsage DigitalSignature -FriendlyName "Test UWP Certificate" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+
+          # Export the certificate to a PFX file
+          $pwd = ConvertTo-SecureString -String $certPassword -Force -AsPlainText
+          Export-PfxCertificate -cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $pwd
+
+          Write-Host "Test certificate created at: $certPath"
+        shell: pwsh
+        # builds visual studio project for UWP and packages it as an appx
+      - uses: ./ # buildalon/unity-uwp-builder
+        id: uwp-build
+        with:
+          architecture: ${{ matrix.uwp-arch }}
+          project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
+          package-type: ${{ matrix.uwp-package-type }}
+          certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
+          certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
+          windows-sdk-version: '10.0.22621.0'
+      - name: print outputs
+        shell: bash
+        run: |
+          EXECUTABLE="${{ steps.uwp-build.outputs.executable }}"
+          if [ -z "${EXECUTABLE}" ]; then
+            echo "No executable found."
+          else
+            echo "Executable: ${EXECUTABLE}"
+          fi
+          # verify the executable file extension based on the package format
+          OUTPUT_DIR="${{ steps.uwp-build.outputs.output-directory }}"
+          if [ -z "${OUTPUT_DIR}" ]; then
+            echo "No output directory found."
+          else
+            echo "Output Directory: ${OUTPUT_DIR}"
+          fi
+          ls -R "${OUTPUT_DIR}"
+      - name: Validate Certificate Usage
+        if: matrix.certificate-type == 'custom' && matrix.uwp-package-type == 'sideload'
+        shell: pwsh
+        run: |
+          $outputDir = "${{ steps.uwp-build.outputs.output-directory }}"
+          $packageFiles = Get-ChildItem -Path $outputDir -Filter "*.appx" -Recurse
+          $packageFiles += Get-ChildItem -Path $outputDir -Filter "*.msix" -Recurse
+
+          if ($packageFiles.Count -eq 0) {
+            Write-Host "❌ No package files found to validate certificate"
+            exit 1
+          }
+
+          foreach ($package in $packageFiles) {
+            Write-Host "🔍 Validating certificate for package: $($package.Name)"
+
+            # Use Get-AuthenticodeSignature to check the certificate
+            $signature = Get-AuthenticodeSignature -FilePath $package.FullName
+
+            if ($signature.Status -eq "Valid") {
+              Write-Host "✅ Package is properly signed"
+              Write-Host "📜 Certificate Subject: $($signature.SignerCertificate.Subject)"
+              Write-Host "👤 Certificate Issuer: $($signature.SignerCertificate.Issuer)"
+              Write-Host "📅 Certificate Valid From: $($signature.SignerCertificate.NotBefore)"
+              Write-Host "📅 Certificate Valid To: $($signature.SignerCertificate.NotAfter)"
+              Write-Host "🔑 Certificate Thumbprint: $($signature.SignerCertificate.Thumbprint)"
+
+              # Check if it's our test certificate
+              if ($signature.SignerCertificate.Subject -like "*TestPublisher*") {
+                Write-Host "✅ Confirmed: Custom test certificate was used successfully!"
+              } else {
+                Write-Host "❌  Warning: Certificate subject doesn't match expected test certificate"
+                exit 1
+              }
+            } elseif ($signature.Status -eq "NotSigned") {
+              Write-Host "❌ Package is not signed"
+              exit 1
+            } else {
+              Write-Host "❌ Package signature status: $($signature.Status)"
+              Write-Host "📝 Signature details: $($signature.StatusMessage)"
+              exit 1
+            }
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: ${{ github.run_number }}.${{ github.run_attempt }} ${{ matrix.unity-version }}-${{ matrix.build-target }}-${{ matrix.uwp-package-type }}-${{ matrix.certificate-type }}
+          path: |
+            ${{ github.workspace }}/**/*.log
+            ${{ steps.uwp-build.outputs.output-directory }}
