@@ -6,9 +6,7 @@
     "WSAPlayer"
   ],
   "unity-version": [
-    "2021.x",
-    "2022.x",
-    "6000.x"
+    "2021.x"
   ],
   "uwp-arch": [
     "x64",
