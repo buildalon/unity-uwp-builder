@@ -3,10 +3,6 @@ permissions:
   contents: read
 on:
   workflow_call:
-    inputs:
-      strategy:
-        required: true
-        type: string
     secrets:
       UNITY_EMAIL:
         required: true
@@ -15,7 +11,6 @@ on:
 jobs:
   build:
     name: ${{ matrix.name }}
-    strategy: ${{ fromJSON(inputs.strategy) }}
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
