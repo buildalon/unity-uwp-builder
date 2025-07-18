@@ -30105,19 +30105,15 @@ const main = async () => {
             throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
         }
         const useAppxFormat = packageFormat === 'appx';
+        core.info(`Requested package format: ${packageFormat}`);
+        core.info(`Requested package type: ${packageType}`);
         switch (packageType) {
             case `upload`:
                 buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`, `/p:GenerateAppInstallerFile=false`, `/p:AppxPackageSigningEnabled=false`, `/p:BuildAppxUploadPackageForUap=true`, `/p:AppxBundle=Always`, `/p:AppxBundlePlatforms="${architecture || 'x64'}"`);
-                if (useAppxFormat) {
-                    buildArgs.push(`/p:UseAppxFormat=true`);
-                }
                 break;
             case `sideload`:
                 const certificatePath = await getCertificatePath(projectPath);
                 buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`, `/p:AppxBundle=Always`, `/p:AppxBundlePlatforms="${architecture || 'x64'}"`, `/p:GenerateTestCertificate=false`);
-                if (useAppxFormat) {
-                    buildArgs.push(`/p:UseAppxFormat=true`);
-                }
                 const certificatePassword = core.getInput(`certificate-password`);
                 if (certificatePassword) {
                     buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
@@ -30126,6 +30122,12 @@ const main = async () => {
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
+        if (useAppxFormat) {
+            core.info('Forcing /p:UseAppxFormat=true for appx output');
+            buildArgs.push(`/p:UseAppxFormat=true`);
+        }
+        core.info(`Final MSBuild arguments:`);
+        buildArgs.forEach(arg => core.info(`  ${arg}`));
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.debug(`additional-args: "${additionalArgs}"`);

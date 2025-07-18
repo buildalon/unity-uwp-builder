@@ -53,6 +53,9 @@ const main = async () => {
             throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
         }
         const useAppxFormat = packageFormat === 'appx';
+        // Extra logging for build args
+        core.info(`Requested package format: ${packageFormat}`);
+        core.info(`Requested package type: ${packageType}`);
         switch (packageType) {
             case `upload`:
                 buildArgs.push(
@@ -63,9 +66,6 @@ const main = async () => {
                     `/p:AppxBundle=Always`,
                     `/p:AppxBundlePlatforms="${architecture || 'x64'}"`
                 );
-                if (useAppxFormat) {
-                    buildArgs.push(`/p:UseAppxFormat=true`); // Force APPX format instead of MSIX
-                }
                 break;
             case `sideload`:
                 const certificatePath = await getCertificatePath(projectPath);
@@ -73,15 +73,12 @@ const main = async () => {
                 buildArgs.push(
                     `/p:UapAppxPackageBuildMode=SideloadOnly`,
                     `/p:AppxPackageSigningEnabled=true`,
-                    `/p:PackageCertificateThumbprint=""`, // The PackageCertificateThumbprint argument is intentionally set to an empty string as a precaution. If the thumbprint is set in the project but does not match the signing certificate, the build will fail with the error: Certificate does not match supplied signing thumbprint.
+                    `/p:PackageCertificateThumbprint=""`,
                     `/p:PackageCertificateKeyFile="${certificatePath}"`,
                     `/p:AppxBundle=Always`,
                     `/p:AppxBundlePlatforms="${architecture || 'x64'}"`,
-                    `/p:GenerateTestCertificate=false` // Don't generate a new test certificate
+                    `/p:GenerateTestCertificate=false`
                 );
-                if (useAppxFormat) {
-                    buildArgs.push(`/p:UseAppxFormat=true`); // Force APPX format instead of MSIX
-                }
                 const certificatePassword = core.getInput(`certificate-password`);
                 if (certificatePassword) {
                     buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
@@ -90,6 +87,13 @@ const main = async () => {
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
+        // Always force UseAppxFormat for appx
+        if (useAppxFormat) {
+            core.info('Forcing /p:UseAppxFormat=true for appx output');
+            buildArgs.push(`/p:UseAppxFormat=true`);
+        }
+        core.info(`Final MSBuild arguments:`);
+        buildArgs.forEach(arg => core.info(`  ${arg}`));
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.debug(`additional-args: "${additionalArgs}"`);
