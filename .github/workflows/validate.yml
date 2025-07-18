@@ -103,7 +103,7 @@ jobs:
           architecture: ${{ matrix.uwp-arch }}
           project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
           package-type: ${{ matrix.uwp-package-type }}
-          certificate-path: ${{ matrix.certificate-type == 'custom' && github.workspace || '' }}/TestCert.pfx
+          certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
           certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
       - name: print outputs
         shell: bash

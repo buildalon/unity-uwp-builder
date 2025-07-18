@@ -6,7 +6,7 @@ import fs = require('fs');
 
 const main = async () => {
     try {
-        if (process.platform !== `win32`) { throw new Error(`This action can only run on Windows runner.`); }
+        if (process.platform !== `win32`) { throw new Error(`This action can only be performed on a Windows runner.`); }
         let projectPath = core.getInput(`project-path`, { required: true });
         core.debug(`project-path: "${projectPath}"`);
         if (!projectPath.endsWith(`.sln`)) {
@@ -47,12 +47,12 @@ const main = async () => {
         }
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
-        const packageFormat = core.getInput(`package-format`) || 'appx';
+        const packageFormat = (core.getInput(`package-format`) || 'appx').toLocaleLowerCase();
         core.debug(`package-format: "${packageFormat}"`);
-        if (packageFormat.toLowerCase() !== 'appx' && packageFormat.toLowerCase() !== 'msix') {
+        if (packageFormat !== 'appx' && packageFormat !== 'msix') {
             throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
         }
-        const useAppxFormat = packageFormat.toLowerCase() === 'appx';
+        const useAppxFormat = packageFormat === 'appx';
         switch (packageType) {
             case `upload`:
                 buildArgs.push(
@@ -101,7 +101,6 @@ const main = async () => {
         const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
         let windowsSDKVersion: string | null = null;
         if (specifiedSDKVersion) {
-            // Validate the specified SDK version exists
             if (await isWindowsSDKVersionAvailable(specifiedSDKVersion)) {
                 windowsSDKVersion = specifiedSDKVersion;
                 core.info(`Using specified Windows SDK version: ${windowsSDKVersion}`);
@@ -184,7 +183,10 @@ const main = async () => {
 main();
 
 async function getCertificatePath(projectPath: string): Promise<string> {
-    let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
+    let certificatePath = core.getInput(`certificate-path`);
+    if (!certificatePath || certificatePath.trim() === ``) {
+        certificatePath = `${projectPath}/**/*.pfx`;
+    }
     core.debug(`certificatePath: "${certificatePath}"`);
     if (!certificatePath.endsWith(`.pfx`)) {
         certificatePath = path.join(certificatePath, `**/*.pfx`);

@@ -30054,7 +30054,7 @@ const fs = __nccwpck_require__(7147);
 const main = async () => {
     try {
         if (process.platform !== `win32`) {
-            throw new Error(`This action can only run on Windows runner.`);
+            throw new Error(`This action can only be performed on a Windows runner.`);
         }
         let projectPath = core.getInput(`project-path`, { required: true });
         core.debug(`project-path: "${projectPath}"`);
@@ -30099,12 +30099,12 @@ const main = async () => {
         }
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
-        const packageFormat = core.getInput(`package-format`) || 'appx';
+        const packageFormat = (core.getInput(`package-format`) || 'appx').toLocaleLowerCase();
         core.debug(`package-format: "${packageFormat}"`);
-        if (packageFormat.toLowerCase() !== 'appx' && packageFormat.toLowerCase() !== 'msix') {
+        if (packageFormat !== 'appx' && packageFormat !== 'msix') {
             throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
         }
-        const useAppxFormat = packageFormat.toLowerCase() === 'appx';
+        const useAppxFormat = packageFormat === 'appx';
         switch (packageType) {
             case `upload`:
                 buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`, `/p:GenerateAppInstallerFile=false`, `/p:AppxPackageSigningEnabled=false`, `/p:BuildAppxUploadPackageForUap=true`, `/p:AppxBundle=Always`, `/p:AppxBundlePlatforms="${architecture || 'x64'}"`);
@@ -30217,7 +30217,10 @@ const main = async () => {
 };
 main();
 async function getCertificatePath(projectPath) {
-    let certificatePath = core.getInput(`certificate-path`) || `${projectPath}/**/*.pfx`;
+    let certificatePath = core.getInput(`certificate-path`);
+    if (!certificatePath || certificatePath.trim() === ``) {
+        certificatePath = `${projectPath}/**/*.pfx`;
+    }
     core.debug(`certificatePath: "${certificatePath}"`);
     if (!certificatePath.endsWith(`.pfx`)) {
         certificatePath = path.join(certificatePath, `**/*.pfx`);
