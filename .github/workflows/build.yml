@@ -14,7 +14,7 @@ on:
         required: true
 jobs:
   build:
-    name: ${{ matrix.name }}
+    name: '(${{ matrix.unity-version }}) ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.uwp-package-type }} ${{ matrix.uwp-package-format }} ${{ matrix.certificate-type }}'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.matrix) }}

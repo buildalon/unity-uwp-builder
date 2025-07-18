@@ -24,13 +24,8 @@ jobs:
   unity-build:
     if: needs.setup.result == 'success' && needs.setup.outputs.jobs
     needs: setup
-    name: '(${{ matrix.unity-version }}) ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.uwp-package-type }} ${{ matrix.uwp-package-format }} ${{ matrix.certificate-type }}'
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
+    name: Validate
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      matrix: ${{ matrix }}
+      matrix: ${{ needs.setup.outputs.jobs }}
