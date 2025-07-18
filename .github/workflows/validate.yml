@@ -24,6 +24,7 @@ jobs:
         build-target: [WSAPlayer]
         unity-version: [2021.x, 2022.x, 6000.x]
         uwp-arch: [x64, ARM64]
+        uwp-subtarget: [PC, HoloLens]
         uwp-package-type: [sideload, upload]
         uwp-package-format: [appx, msix]
         certificate-type: [default, custom]
@@ -78,7 +79,7 @@ jobs:
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
-          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }}'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }}'
       - uses: microsoft/setup-msbuild@v2
       # Create a test certificate for custom certificate testing
       - name: Create Test Certificate

@@ -264,7 +264,7 @@ async function getAvailableWindowsSDKVersion(): Promise<string | null> {
                 const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
                 allVersions.push(...versions);
 
-                core.debug(`Found Windows SDK versions in ${basePath}: ${versions.join(', ')}`);
+                core.info(`Found Windows SDK versions in ${basePath}: ${versions.join(', ')}`);
             } catch (error) {
                 core.debug(`Path not accessible: ${basePath}`);
                 continue;
@@ -291,7 +291,7 @@ async function getAvailableWindowsSDKVersion(): Promise<string | null> {
             return 0;
         });
 
-        core.debug(`All available Windows SDK versions: ${uniqueVersions.join(', ')}`);
+        core.info(`All available Windows SDK versions: ${uniqueVersions.join(', ')}`);
         return uniqueVersions[0]; // Return the latest version
 
     } catch (error) {
