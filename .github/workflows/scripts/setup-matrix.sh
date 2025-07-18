@@ -15,4 +15,4 @@ JOBS_JSON=$(jq -c . <<'EOF'
 }
 EOF
 )
-echo \"jobs="${JOBS_JSON}"\" >> "$GITHUB_OUTPUT"
+echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"
