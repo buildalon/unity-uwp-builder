@@ -1,5 +1,5 @@
 #!/bin/bash
-MATRIX_JSON=$(jq -c . <<'EOF'
+JOBS_JSON=$(jq -c . <<'EOF'
 {
   "os": ["windows-latest"],
   "build-target": ["WSAPlayer"],
@@ -15,4 +15,4 @@ MATRIX_JSON=$(jq -c . <<'EOF'
 }
 EOF
 )
-echo \"matrix="${MATRIX_JSON}"\" >> "$GITHUB_OUTPUT"
+echo \"jobs="${JOBS_JSON}"\" >> "$GITHUB_OUTPUT"
