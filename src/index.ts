@@ -122,11 +122,16 @@ const main = async () => {
             }
             buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
         }
-        await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
-            windowsVerbatimArguments: true
-        });
+        core.startGroup(`MSBuild`);
+        try {
+            await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
+                windowsVerbatimArguments: true
+            });
+        } finally {
+            core.endGroup();
+        }
         const outputDirectory = path.join(projectPath, `AppPackages`);
-        core.debug(`outputDirectory: ${outputDirectory}`);
+        core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
         const patterns = [
             `${outputDirectory}/**/*.appx`,
@@ -142,8 +147,8 @@ const main = async () => {
         if (executables.length === 0) {
             throw new Error(`No executable file found in "${outputDirectory}".`);
         }
-        core.debug(`Found executables:`);
-        executables.forEach(executable => core.debug(`  - "${executable}"`));
+        core.info(`Found executables:`);
+        executables.forEach(executable => core.info(`  - "${executable}"`));
         let executable: string | undefined;
         switch (packageType) {
             case `upload`:
@@ -166,7 +171,7 @@ const main = async () => {
         if (!executable) {
             throw new Error(`No matching executable found for package type "${packageType}".`);
         }
-        core.debug(`Found executable: "${executable}"`);
+        core.info(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);
     } catch (error) {
         core.setFailed(error);
