@@ -68,13 +68,31 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
     done
 done
 
-# { include: [...], exclude: [...] }
+# Output matrix with top-level arrays and exclude
+UNITY_VERSIONS=$(echo "$BUILD_OPTIONS_JSON" | jq -c '."unity-version"')
+UWP_ARCHS=$(echo "$BUILD_OPTIONS_JSON" | jq -c '."uwp-arch"')
+UWP_SUBTARGETS=$(echo "$BUILD_OPTIONS_JSON" | jq -c '."uwp-subtarget"')
+UWP_PACKAGE_TYPES=$(echo "$BUILD_OPTIONS_JSON" | jq -c '."uwp-package-type"')
+UWP_PACKAGE_FORMATS=$(echo "$BUILD_OPTIONS_JSON" | jq -c '."uwp-package-format"')
+CERTIFICATE_TYPES=$(echo "$BUILD_OPTIONS_JSON" | jq -c '."certificate-type"')
+EXCLUDE=$(echo "$BUILD_OPTIONS_JSON" | jq -c '.exclude')
+
 MATRIX_JSON=$(jq -c -n \
-    --argjson include "$(printf '%s\n' "${INCLUDED_JOBS[@]}" | jq -s .)" \
-    --argjson exclude "$(printf '%s\n' "${EXCLUDED_JOBS[@]}" | jq -s .)" \
+    --argjson unity_version "$UNITY_VERSIONS" \
+    --argjson uwp_arch "$UWP_ARCHS" \
+    --argjson uwp_subtarget "$UWP_SUBTARGETS" \
+    --argjson uwp_package_type "$UWP_PACKAGE_TYPES" \
+    --argjson uwp_package_format "$UWP_PACKAGE_FORMATS" \
+    --argjson certificate_type "$CERTIFICATE_TYPES" \
+    --argjson exclude "$EXCLUDE" \
     '{
-        include: $include,
-        exclude: $exclude
+        "unity-version": $unity_version,
+        "uwp-arch": $uwp_arch,
+        "uwp-subtarget": $uwp_subtarget,
+        "uwp-package-type": $uwp_package_type,
+        "uwp-package-format": $uwp_package_format,
+        "certificate-type": $certificate_type,
+        "exclude": $exclude
     }')
 echo "Generated jobs JSON:"
 echo "$MATRIX_JSON" | jq .
