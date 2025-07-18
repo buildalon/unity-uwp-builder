@@ -30126,8 +30126,6 @@ const main = async () => {
             core.info('Forcing /p:UseAppxFormat=true for appx output');
             buildArgs.push(`/p:UseAppxFormat=true`);
         }
-        core.info(`Final MSBuild arguments:`);
-        buildArgs.forEach(arg => core.info(`  ${arg}`));
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.debug(`additional-args: "${additionalArgs}"`);
@@ -30157,6 +30155,8 @@ const main = async () => {
             }
             buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
         }
+        core.info(`Final MSBuild arguments:`);
+        buildArgs.forEach(arg => core.info(`  ${arg}`));
         core.startGroup(`MSBuild`);
         try {
             await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
@@ -30181,7 +30181,10 @@ const main = async () => {
         const executableGlobber = await glob.create(patterns.join(`\n`));
         const executables = await executableGlobber.glob();
         if (executables.length === 0) {
-            throw new Error(`No executable file found in "${outputDirectory}".`);
+            const expectedFileTypes = packageType === 'upload'
+                ? ['.appxupload', '.msixupload']
+                : ['.appxbundle', '.msixbundle', '.appx', '.msix'];
+            throw new Error(`No executable file found in "${outputDirectory}". Expected file types: ${expectedFileTypes.join(', ')}.`);
         }
         core.info(`Found executables:`);
         executables.forEach(executable => core.info(`  - "${executable}"`));

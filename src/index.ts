@@ -53,7 +53,6 @@ const main = async () => {
             throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
         }
         const useAppxFormat = packageFormat === 'appx';
-        // Extra logging for build args
         core.info(`Requested package format: ${packageFormat}`);
         core.info(`Requested package type: ${packageType}`);
         switch (packageType) {
@@ -87,13 +86,10 @@ const main = async () => {
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
-        // Always force UseAppxFormat for appx
         if (useAppxFormat) {
             core.info('Forcing /p:UseAppxFormat=true for appx output');
             buildArgs.push(`/p:UseAppxFormat=true`);
         }
-        core.info(`Final MSBuild arguments:`);
-        buildArgs.forEach(arg => core.info(`  ${arg}`));
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.debug(`additional-args: "${additionalArgs}"`);
@@ -113,7 +109,6 @@ const main = async () => {
                 windowsSDKVersion = await getAvailableWindowsSDKVersion();
             }
         } else {
-            // Auto-detect the latest available SDK version
             windowsSDKVersion = await getAvailableWindowsSDKVersion();
         }
         if (windowsSDKVersion) {
@@ -122,6 +117,8 @@ const main = async () => {
             }
             buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
         }
+        core.info(`Final MSBuild arguments:`);
+        buildArgs.forEach(arg => core.info(`  ${arg}`));
         core.startGroup(`MSBuild`);
         try {
             await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
@@ -145,7 +142,10 @@ const main = async () => {
         const executableGlobber = await glob.create(patterns.join(`\n`));
         const executables = await executableGlobber.glob();
         if (executables.length === 0) {
-            throw new Error(`No executable file found in "${outputDirectory}".`);
+            const expectedFileTypes = packageType === 'upload'
+                ? ['.appxupload', '.msixupload']
+                : ['.appxbundle', '.msixbundle', '.appx', '.msix'];
+            throw new Error(`No executable file found in "${outputDirectory}". Expected file types: ${expectedFileTypes.join(', ')}.`);
         }
         core.info(`Found executables:`);
         executables.forEach(executable => core.info(`  - "${executable}"`));
