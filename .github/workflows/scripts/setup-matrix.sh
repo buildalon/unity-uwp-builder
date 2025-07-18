@@ -72,8 +72,8 @@ done
 # Join arrays with comma, no newlines, and output as a single line
 INCLUDE_JOINED=$(IFS=,; echo "${INCLUDED_JOBS[*]}")
 EXCLUDE_JOINED=$(IFS=,; echo "${EXCLUDED_JOBS[*]}")
-JOBS_JSON="{\"include\": [${INCLUDE_JOINED}], \"exclude\": [${EXCLUDE_JOINED}],\"fail-fast\": \"false\"}"
+JOBS_JSON="{\"include\": [${INCLUDE_JOINED}], \"exclude\": [${EXCLUDE_JOINED}]}"
 # show json debug
-echo "Generated jobs JSON:"
+echo "strategy:"
 echo "$JOBS_JSON" | jq .
 echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"
