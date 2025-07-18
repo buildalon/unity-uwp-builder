@@ -4612,7 +4612,7 @@ function expand(str, isTop) {
   var isOptions = m.body.indexOf(',') >= 0;
   if (!isSequence && !isOptions) {
     // {a},b}
-    if (m.post.match(/,.*\}/)) {
+    if (m.post.match(/,(?!,).*\}/)) {
       str = m.pre + '{' + m.body + escClose + m.post;
       return expand(str);
     }
@@ -30099,13 +30099,25 @@ const main = async () => {
         }
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
+        const packageFormat = core.getInput(`package-format`) || 'appx';
+        core.debug(`package-format: "${packageFormat}"`);
+        if (packageFormat.toLowerCase() !== 'appx' && packageFormat.toLowerCase() !== 'msix') {
+            throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
+        }
+        const useAppxFormat = packageFormat.toLowerCase() === 'appx';
         switch (packageType) {
             case `upload`:
-                buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`, `/p:GenerateAppInstallerFile=false`, `/p:AppxPackageSigningEnabled=false`, `/p:BuildAppxUploadPackageForUap=true`);
+                buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`, `/p:GenerateAppInstallerFile=false`, `/p:AppxPackageSigningEnabled=false`, `/p:BuildAppxUploadPackageForUap=true`, `/p:AppxBundle=Always`, `/p:AppxBundlePlatforms="${architecture || 'x64'}"`);
+                if (useAppxFormat) {
+                    buildArgs.push(`/p:UseAppxFormat=true`);
+                }
                 break;
             case `sideload`:
                 const certificatePath = await getCertificatePath(projectPath);
-                buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
+                buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`, `/p:AppxBundle=Always`, `/p:AppxBundlePlatforms="${architecture || 'x64'}"`, `/p:GenerateTestCertificate=false`);
+                if (useAppxFormat) {
+                    buildArgs.push(`/p:UseAppxFormat=true`);
+                }
                 const certificatePassword = core.getInput(`certificate-password`);
                 if (certificatePassword) {
                     buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
@@ -30147,10 +30159,29 @@ const main = async () => {
         let executable;
         switch (packageType) {
             case `upload`:
-                executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
+                if (useAppxFormat) {
+                    executable = executables.find(file => file.endsWith(`.appxupload`));
+                }
+                else {
+                    executable = executables.find(file => file.endsWith(`.msixupload`));
+                }
+                if (!executable) {
+                    executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
+                }
                 break;
             case `sideload`:
-                executable = executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
+                if (useAppxFormat) {
+                    executable = executables.find(file => file.endsWith(`.appxbundle`)) ||
+                        executables.find(file => file.endsWith(`.appx`));
+                }
+                else {
+                    executable = executables.find(file => file.endsWith(`.msixbundle`)) ||
+                        executables.find(file => file.endsWith(`.msix`));
+                }
+                if (!executable) {
+                    executable = executables.find(file => file.endsWith(`.appxbundle`) || file.endsWith(`.msixbundle`)) ||
+                        executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
+                }
                 break;
         }
         if (!executable) {
@@ -30176,16 +30207,18 @@ async function getCertificatePath(projectPath) {
         core.debug(`Found certificate files:`);
         certificateFiles.forEach(file => core.debug(`  - "${file}"`));
         if (certificateFiles.length === 0) {
-            throw new Error(`No certificate file found: "${certificatePath}"`);
+            throw new Error(`No certificate file found: "${certificatePath}". Make sure Unity generated a test certificate or provide a custom certificate path.`);
         }
-        certificatePath = certificateFiles[0];
+        const unityCertificate = certificateFiles.find(file => file.includes('_TemporaryKey.pfx') || file.includes('TestCertificate.pfx'));
+        certificatePath = unityCertificate || certificateFiles[0];
     }
     try {
         await fs.promises.access(certificatePath, fs.constants.R_OK);
     }
     catch (error) {
-        throw new Error(`Certificate file not found: "${certificatePath}"`);
+        throw new Error(`Certificate file not found: "${certificatePath}". Make sure the certificate exists and is readable.`);
     }
+    core.info(`Using certificate: ${certificatePath}`);
     return certificatePath;
 }
 

@@ -47,14 +47,25 @@ const main = async () => {
         }
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
+        const packageFormat = core.getInput(`package-format`) || 'appx';
+        core.debug(`package-format: "${packageFormat}"`);
+        if (packageFormat.toLowerCase() !== 'appx' && packageFormat.toLowerCase() !== 'msix') {
+            throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
+        }
+        const useAppxFormat = packageFormat.toLowerCase() === 'appx';
         switch (packageType) {
             case `upload`:
                 buildArgs.push(
                     `/p:UapAppxPackageBuildMode=StoreUpload`,
                     `/p:GenerateAppInstallerFile=false`,
                     `/p:AppxPackageSigningEnabled=false`,
-                    `/p:BuildAppxUploadPackageForUap=true`
+                    `/p:BuildAppxUploadPackageForUap=true`,
+                    `/p:AppxBundle=Always`,
+                    `/p:AppxBundlePlatforms="${architecture || 'x64'}"`
                 );
+                if (useAppxFormat) {
+                    buildArgs.push(`/p:UseAppxFormat=true`); // Force APPX format instead of MSIX
+                }
                 break;
             case `sideload`:
                 const certificatePath = await getCertificatePath(projectPath);
@@ -64,7 +75,13 @@ const main = async () => {
                     `/p:AppxPackageSigningEnabled=true`,
                     `/p:PackageCertificateThumbprint=""`, // The PackageCertificateThumbprint argument is intentionally set to an empty string as a precaution. If the thumbprint is set in the project but does not match the signing certificate, the build will fail with the error: Certificate does not match supplied signing thumbprint.
                     `/p:PackageCertificateKeyFile="${certificatePath}"`,
+                    `/p:AppxBundle=Always`,
+                    `/p:AppxBundlePlatforms="${architecture || 'x64'}"`,
+                    `/p:GenerateTestCertificate=false` // Don't generate a new test certificate
                 );
+                if (useAppxFormat) {
+                    buildArgs.push(`/p:UseAppxFormat=true`); // Force APPX format instead of MSIX
+                }
                 const certificatePassword = core.getInput(`certificate-password`);
                 if (certificatePassword) {
                     buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
@@ -106,10 +123,31 @@ const main = async () => {
         let executable: string | undefined;
         switch (packageType) {
             case `upload`:
-                executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
+                // Prefer the format specified by the user
+                if (useAppxFormat) {
+                    executable = executables.find(file => file.endsWith(`.appxupload`));
+                } else {
+                    executable = executables.find(file => file.endsWith(`.msixupload`));
+                }
+                // Fallback to any upload format if preferred format not found
+                if (!executable) {
+                    executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
+                }
                 break;
             case `sideload`:
-                executable = executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
+                // Prefer bundles over individual packages, and prefer the format specified by the user
+                if (useAppxFormat) {
+                    executable = executables.find(file => file.endsWith(`.appxbundle`)) ||
+                        executables.find(file => file.endsWith(`.appx`));
+                } else {
+                    executable = executables.find(file => file.endsWith(`.msixbundle`)) ||
+                        executables.find(file => file.endsWith(`.msix`));
+                }
+                // Fallback to any sideload format if preferred format not found
+                if (!executable) {
+                    executable = executables.find(file => file.endsWith(`.appxbundle`) || file.endsWith(`.msixbundle`)) ||
+                        executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
+                }
                 break;
         }
         if (!executable) {
@@ -136,14 +174,17 @@ async function getCertificatePath(projectPath: string): Promise<string> {
         core.debug(`Found certificate files:`);
         certificateFiles.forEach(file => core.debug(`  - "${file}"`));
         if (certificateFiles.length === 0) {
-            throw new Error(`No certificate file found: "${certificatePath}"`);
+            throw new Error(`No certificate file found: "${certificatePath}". Make sure Unity generated a test certificate or provide a custom certificate path.`);
         }
-        certificatePath = certificateFiles[0];
+        // Prefer Unity's generated certificate if multiple are found
+        const unityCertificate = certificateFiles.find(file => file.includes('_TemporaryKey.pfx') || file.includes('TestCertificate.pfx'));
+        certificatePath = unityCertificate || certificateFiles[0];
     }
     try {
         await fs.promises.access(certificatePath, fs.constants.R_OK);
     } catch (error) {
-        throw new Error(`Certificate file not found: "${certificatePath}"`);
+        throw new Error(`Certificate file not found: "${certificatePath}". Make sure the certificate exists and is readable.`);
     }
+    core.info(`Using certificate: ${certificatePath}`);
     return certificatePath;
 }

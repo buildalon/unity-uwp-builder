@@ -4,11 +4,10 @@ on:
     branches: ['main']
   pull_request:
     branches: ['*']
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   unity-build:
     name: '(${{ matrix.unity-version }}) ${{ matrix.build-target }} - ${{ matrix.uwp-package-type }}'
@@ -82,9 +81,19 @@ jobs:
       - name: print outputs
         shell: bash
         run: |
-          echo "Executable: ${{ steps.uwp-build.outputs.executable }}"
-          echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
-          ls -R "${{ steps.uwp-build.outputs.output-directory }}"
+          EXECUTABLE="${{ steps.uwp-build.outputs.executable }}"
+          if [ -z "${EXECUTABLE}" ]; then
+            echo "No executable found."
+          else
+            echo "Executable: ${EXECUTABLE}"
+          fi
+          OUTPUT_DIR="${{ steps.uwp-build.outputs.output-directory }}"
+          if [ -z "${OUTPUT_DIR}" ]; then
+            echo "No output directory found."
+          else
+            echo "Output Directory: ${OUTPUT_DIR}"
+          fi
+          ls -R "${OUTPUT_DIR}"
       - uses: actions/upload-artifact@v4
         with:
           retention-days: 1

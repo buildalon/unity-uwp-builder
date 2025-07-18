@@ -20,7 +20,7 @@
     "@actions/glob": "^0.5.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.18",
+    "@types/node": "^22.16.4",
     "@vercel/ncc": "^0.34.0",
     "shx": "^0.3.4",
     "typescript": "^5.8.3"
