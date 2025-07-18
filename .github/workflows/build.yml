@@ -8,7 +8,7 @@ on:
         required: true
         type: string
     secrets:
-      UNITY_EMAIL:
+      UNITY_USERNAME:
         required: true
       UNITY_PASSWORD:
         required: true
