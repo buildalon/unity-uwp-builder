@@ -242,7 +242,6 @@ async function isWindowsSDKVersionAvailable(version: string): Promise<boolean> {
 
 /**
  * Detects the available Windows SDK version on the build machine
- * to avoid MSB3774 errors when Unity generates projects with unavailable SDK versions
  */
 async function getAvailableWindowsSDKVersion(): Promise<string | null> {
     try {
