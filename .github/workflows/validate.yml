@@ -22,31 +22,13 @@ jobs:
     outputs:
       matrix: ${{ steps.setup-jobs.outputs.matrix }}
   validate:
-    name: Validate Matrix
-    needs: setup
-    if: needs.setup.outputs.matrix
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate Matrix
-        run: echo "Matrix is valid"
-      - name: Display Matrix
-        run: |
-          MATRIX="${{ needs.setup.outputs.matrix }}"
-          if [ -z "$MATRIX" ]; then
-            echo "❌ matrix not found"
-            exit 1
-          else
-            echo "✅ Matrix found:"
-            echo "Matrix: $MATRIX"
-          fi
-  build:
     if: needs.setup.outputs.matrix
     needs: setup
-    name: Build
+    name: Validate
     strategy:
       matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
       fail-fast: false
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      matrix: ${{ toJSON(matrix.matrix) }}
+      matrix: ${{ toJSON(needs.setup.outputs.matrix) }}
