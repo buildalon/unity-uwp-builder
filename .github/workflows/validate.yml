@@ -22,10 +22,13 @@ jobs:
     outputs:
       jobs: ${{ steps.setup-jobs.outputs.jobs }}
   unity-build:
-    if: needs.setup.result == 'success' && needs.setup.outputs.jobs
+    if: needs.setup.outputs.jobs
     needs: setup
     name: Validate
+    strategy:
+      matrix: ${{ fromJSON(needs.setup.outputs.jobs) || '' }}
+      fail-fast: false
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      matrix: ${{ needs.setup.outputs.jobs }}
+      strategy: ${{ toJSON(matrix.strategy) }}

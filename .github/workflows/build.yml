@@ -4,7 +4,7 @@ permissions:
 on:
   workflow_call:
     inputs:
-      matrix:
+      strategy:
         required: true
         type: string
     secrets:
@@ -14,11 +14,9 @@ on:
         required: true
 jobs:
   build:
-    name: '(${{ matrix.unity-version }}) ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.uwp-package-type }} ${{ matrix.uwp-package-format }} ${{ matrix.certificate-type }}'
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix) }}
-    runs-on: ${{ matrix.runner }}
+    name: ${{ matrix.name }}
+    strategy: ${{ fromJson(inputs.strategy) }}
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
     env:
