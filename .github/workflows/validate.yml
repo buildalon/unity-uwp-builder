@@ -32,3 +32,5 @@ jobs:
       matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
     secrets: inherit
     uses: ./.github/workflows/build.yml
+    with:
+      matrix: ${{ matrix }}
