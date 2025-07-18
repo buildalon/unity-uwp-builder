@@ -79,13 +79,10 @@ jobs:
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
-          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }}'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK 10.0.22621.0'
       - uses: microsoft/setup-msbuild@v2
         with:
-          vs-version: |
-            17.0
-            16.0
-            15.0
+          vs-version: '[15.0, )'
       # Create a test certificate for custom certificate testing
       - name: Create Test Certificate
         if: matrix.certificate-type == 'custom'
