@@ -32,6 +32,9 @@ inputs:
   certificate-password:
     description: 'The password for the certificate to use when packaging the UWP project. Required when providing your own certificate.'
     required: false
+  windows-sdk-version:
+    description: 'The Windows SDK version to use for building. If not specified, the latest available SDK version will be automatically detected and used.'
+    required: false
 outputs:
   executable:
     description: The path to the generated executable.

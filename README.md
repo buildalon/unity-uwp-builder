@@ -42,6 +42,8 @@ steps:
 | `package-format` | The package format to use. Can be: `appx` or `msix`. | Defaults to `appx`. APPX is recommended for Unity UWP projects. |
 | `certificate-path` | The path to the certificate to use when packaging the UWP project. | Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate. |
 | `certificate-password` | The password for the certificate. | Required when providing your own certificate. |
+| `windows-sdk-version` | The Windows SDK version to use for building. If not specified, the latest available SDK version will be automatically detected and used. | Optional. Format: `10.0.xxxxx.x` (e.g., `10.0.22621.0`) |
+| `additional-args` | Additional arguments to pass to the msbuild command. | Optional. |
 
 ### outputs
 

@@ -98,6 +98,27 @@ const main = async () => {
         if (!core.isDebug()) {
             buildArgs.push(`/verbosity:minimal`);
         }
+        const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
+        let windowsSDKVersion: string | null = null;
+        if (specifiedSDKVersion) {
+            // Validate the specified SDK version exists
+            if (await isWindowsSDKVersionAvailable(specifiedSDKVersion)) {
+                windowsSDKVersion = specifiedSDKVersion;
+                core.info(`Using specified Windows SDK version: ${windowsSDKVersion}`);
+            } else {
+                core.warning(`Specified Windows SDK version ${specifiedSDKVersion} not found. Falling back to auto-detection.`);
+                windowsSDKVersion = await getAvailableWindowsSDKVersion();
+            }
+        } else {
+            // Auto-detect the latest available SDK version
+            windowsSDKVersion = await getAvailableWindowsSDKVersion();
+        }
+        if (windowsSDKVersion) {
+            if (!specifiedSDKVersion) {
+                core.info(`Auto-detected Windows SDK version: ${windowsSDKVersion}`);
+            }
+            buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
+        }
         await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
             windowsVerbatimArguments: true
         });
@@ -187,4 +208,94 @@ async function getCertificatePath(projectPath: string): Promise<string> {
     }
     core.info(`Using certificate: ${certificatePath}`);
     return certificatePath;
+}
+
+/**
+ * Checks if a specific Windows SDK version is available on the build machine
+ */
+async function isWindowsSDKVersionAvailable(version: string): Promise<boolean> {
+    try {
+        // Common Windows SDK installation paths
+        const possiblePaths = [
+            'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
+            'C:\\Program Files\\Windows Kits\\10\\Include'
+        ];
+
+        for (const basePath of possiblePaths) {
+            try {
+                const versionPath = path.join(basePath, version);
+                await fs.promises.access(versionPath, fs.constants.R_OK);
+                core.debug(`Found Windows SDK version ${version} at: ${versionPath}`);
+                return true;
+            } catch (error) {
+                continue;
+            }
+        }
+
+        core.debug(`Windows SDK version ${version} not found in standard locations`);
+        return false;
+    } catch (error) {
+        core.debug(`Error checking Windows SDK version ${version}: ${error}`);
+        return false;
+    }
+}
+
+/**
+ * Detects the available Windows SDK version on the build machine
+ * to avoid MSB3774 errors when Unity generates projects with unavailable SDK versions
+ */
+async function getAvailableWindowsSDKVersion(): Promise<string | null> {
+    try {
+        // Common Windows SDK installation paths
+        const possiblePaths = [
+            'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
+            'C:\\Program Files\\Windows Kits\\10\\Include'
+        ];
+
+        let allVersions: string[] = [];
+
+        for (const basePath of possiblePaths) {
+            try {
+                await fs.promises.access(basePath, fs.constants.R_OK);
+                const entries = await fs.promises.readdir(basePath);
+
+                // Filter for version directories (format: 10.0.xxxxx.x)
+                const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
+                allVersions.push(...versions);
+
+                core.debug(`Found Windows SDK versions in ${basePath}: ${versions.join(', ')}`);
+            } catch (error) {
+                core.debug(`Path not accessible: ${basePath}`);
+                continue;
+            }
+        }
+
+        if (allVersions.length === 0) {
+            core.warning('No Windows SDK versions found in standard installation paths. Build may fail if Unity references an unavailable SDK version.');
+            return null;
+        }
+
+        // Remove duplicates and sort versions in descending order to prefer the latest
+        const uniqueVersions = [...new Set(allVersions)].sort((a, b) => {
+            const aParts = a.split('.').map(Number);
+            const bParts = b.split('.').map(Number);
+
+            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                const aVal = aParts[i] || 0;
+                const bVal = bParts[i] || 0;
+                if (aVal !== bVal) {
+                    return bVal - aVal; // Descending order
+                }
+            }
+            return 0;
+        });
+
+        core.debug(`All available Windows SDK versions: ${uniqueVersions.join(', ')}`);
+        return uniqueVersions[0]; // Return the latest version
+
+    } catch (error) {
+        core.debug(`Error detecting Windows SDK version: ${error}`);
+        core.warning('Could not automatically detect Windows SDK version. Build may fail if Unity references an unavailable SDK version.');
+        return null;
+    }
 }
