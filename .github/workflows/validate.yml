@@ -31,4 +31,4 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      matrix: ${{ toJSON(needs.setup.outputs.matrix) }}
+      matrix: ${{ needs.setup.outputs.matrix }}
