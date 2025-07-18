@@ -21,7 +21,7 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
                 for UWP_PACKAGE_FORMAT in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-format"[]'); do
                     for CERTIFICATE_TYPE in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]'); do
                         # create a job object
-                        JOB=$(jq -n \
+                        JOB=$(jq -c -n \
                             --arg unity_version "$UNITY_VERSION" \
                             --arg uwp_arch "$UWP_ARCH" \
                             --arg uwp_subtarget "$UWP_SUBTARGET" \
@@ -66,9 +66,13 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
             done
         done
     done
+
 done
 
-JOBS_JSON="{\"include\": [$(IFS=,; echo "${INCLUDED_JOBS[*]}")], \"exclude\": [$(IFS=,; echo "${EXCLUDED_JOBS[*]}")]}"
+# Join arrays with comma, no newlines, and output as a single line
+INCLUDE_JOINED=$(IFS=,; echo "${INCLUDED_JOBS[*]}")
+EXCLUDE_JOINED=$(IFS=,; echo "${EXCLUDED_JOBS[*]}")
+JOBS_JSON="{\"include\": [${INCLUDE_JOINED}], \"exclude\": [${EXCLUDE_JOINED}]}"
 # show json debug
 echo "Generated jobs JSON:"
 echo "$JOBS_JSON"
