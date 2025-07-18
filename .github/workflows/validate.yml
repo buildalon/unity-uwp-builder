@@ -24,9 +24,9 @@ jobs:
   unity-build:
     if: needs.setup.outputs.jobs
     needs: setup
-    name: Validate
+    name: ${{ matrix.name || 'Build' }}
     strategy:
-      matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.jobs) || '' }}
       fail-fast: false
     secrets: inherit
     uses: ./.github/workflows/build.yml

@@ -15,9 +15,7 @@ on:
 jobs:
   build:
     name: ${{ matrix.name }}
-    strategy:
-      matrix: ${{ fromJSON(inputs.strategy) }}
-      fail-fast: false
+    strategy: ${{ fromJSON(inputs.strategy) }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
