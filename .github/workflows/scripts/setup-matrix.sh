@@ -71,10 +71,8 @@ done
 # { include: [...], exclude: [...] }
 MATRIX_JSON=$(jq -c -n \
     --argjson include "$(printf '%s\n' "${INCLUDED_JOBS[@]}" | jq -s .)" \
-    --argjson exclude "$(printf '%s\n' "${EXCLUDED_JOBS[@]}" | jq -s .)" \
     '{
-        include: $include,
-        exclude: $exclude
+        include: $include
     }')
 echo "Generated jobs JSON:"
 echo "$MATRIX_JSON" | jq .
