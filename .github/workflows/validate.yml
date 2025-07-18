@@ -24,7 +24,7 @@ jobs:
   validate:
     if: needs.setup.outputs.matrix
     needs: setup
-    name: Validate
+    name: validate
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:

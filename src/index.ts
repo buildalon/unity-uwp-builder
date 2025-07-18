@@ -143,30 +143,19 @@ const main = async () => {
         let executable: string | undefined;
         switch (packageType) {
             case `upload`:
-                // Prefer the format specified by the user
                 if (useAppxFormat) {
                     executable = executables.find(file => file.endsWith(`.appxupload`));
                 } else {
                     executable = executables.find(file => file.endsWith(`.msixupload`));
                 }
-                // Fallback to any upload format if preferred format not found
-                if (!executable) {
-                    executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
-                }
                 break;
             case `sideload`:
-                // Prefer bundles over individual packages, and prefer the format specified by the user
                 if (useAppxFormat) {
                     executable = executables.find(file => file.endsWith(`.appxbundle`)) ||
                         executables.find(file => file.endsWith(`.appx`));
                 } else {
                     executable = executables.find(file => file.endsWith(`.msixbundle`)) ||
                         executables.find(file => file.endsWith(`.msix`));
-                }
-                // Fallback to any sideload format if preferred format not found
-                if (!executable) {
-                    executable = executables.find(file => file.endsWith(`.appxbundle`) || file.endsWith(`.msixbundle`)) ||
-                        executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
                 }
                 break;
         }

@@ -30186,9 +30186,6 @@ const main = async () => {
                 else {
                     executable = executables.find(file => file.endsWith(`.msixupload`));
                 }
-                if (!executable) {
-                    executable = executables.find(file => file.endsWith(`.appxupload`) || file.endsWith(`.msixupload`));
-                }
                 break;
             case `sideload`:
                 if (useAppxFormat) {
@@ -30198,10 +30195,6 @@ const main = async () => {
                 else {
                     executable = executables.find(file => file.endsWith(`.msixbundle`)) ||
                         executables.find(file => file.endsWith(`.msix`));
-                }
-                if (!executable) {
-                    executable = executables.find(file => file.endsWith(`.appxbundle`) || file.endsWith(`.msixbundle`)) ||
-                        executables.find(file => file.endsWith(`.appx`) || file.endsWith(`.msix`));
                 }
                 break;
         }

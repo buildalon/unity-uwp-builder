@@ -1,4 +1,4 @@
-name: Build
+name: build
 permissions:
   contents: read
 on:
@@ -100,7 +100,7 @@ jobs:
           certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
           certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
           windows-sdk-version: '10.0.22621.0'
-      - name: print outputs
+      - name: Validate Outputs
         shell: bash
         run: |
           EXECUTABLE="${{ steps.uwp-build.outputs.executable }}"
