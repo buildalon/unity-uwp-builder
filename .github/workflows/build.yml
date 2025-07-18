@@ -121,44 +121,38 @@ jobs:
         if: matrix.certificate-type == 'custom' && matrix.uwp-package-type == 'sideload'
         shell: pwsh
         run: |
-          $outputDir = "${{ steps.uwp-build.outputs.output-directory }}"
-          $packageFiles = Get-ChildItem -Path $outputDir -Filter "*.appx" -Recurse
-          $packageFiles += Get-ChildItem -Path $outputDir -Filter "*.msix" -Recurse
+          $executable = "${{ steps.uwp-build.outputs.executable }}"
+          Write-Host "🔍 Validating certificate for executable: $executable"
 
-          if ($packageFiles.Count -eq 0) {
-            Write-Host "❌ No package files found to validate certificate"
+          if (-not (Test-Path $executable)) {
+            Write-Host "❌ Executable not found: $executable"
             exit 1
           }
 
-          foreach ($package in $packageFiles) {
-            Write-Host "🔍 Validating certificate for package: $($package.Name)"
+          $signature = Get-AuthenticodeSignature -FilePath $executable
 
-            # Use Get-AuthenticodeSignature to check the certificate
-            $signature = Get-AuthenticodeSignature -FilePath $package.FullName
+          if ($signature.Status -eq "Valid") {
+            Write-Host "✅ Executable is properly signed"
+            Write-Host "📜 Certificate Subject: $($signature.SignerCertificate.Subject)"
+            Write-Host "👤 Certificate Issuer: $($signature.SignerCertificate.Issuer)"
+            Write-Host "📅 Certificate Valid From: $($signature.SignerCertificate.NotBefore)"
+            Write-Host "📅 Certificate Valid To: $($signature.SignerCertificate.NotAfter)"
+            Write-Host "🔑 Certificate Thumbprint: $($signature.SignerCertificate.Thumbprint)"
 
-            if ($signature.Status -eq "Valid") {
-              Write-Host "✅ Package is properly signed"
-              Write-Host "📜 Certificate Subject: $($signature.SignerCertificate.Subject)"
-              Write-Host "👤 Certificate Issuer: $($signature.SignerCertificate.Issuer)"
-              Write-Host "📅 Certificate Valid From: $($signature.SignerCertificate.NotBefore)"
-              Write-Host "📅 Certificate Valid To: $($signature.SignerCertificate.NotAfter)"
-              Write-Host "🔑 Certificate Thumbprint: $($signature.SignerCertificate.Thumbprint)"
-
-              # Check if it's our test certificate
-              if ($signature.SignerCertificate.Subject -like "*TestPublisher*") {
-                Write-Host "✅ Confirmed: Custom test certificate was used successfully!"
-              } else {
-                Write-Host "❌  Warning: Certificate subject doesn't match expected test certificate"
-                exit 1
-              }
-            } elseif ($signature.Status -eq "NotSigned") {
-              Write-Host "❌ Package is not signed"
-              exit 1
+            # Check if it's our test certificate
+            if ($signature.SignerCertificate.Subject -like "*TestPublisher*") {
+              Write-Host "✅ Confirmed: Custom test certificate was used successfully!"
             } else {
-              Write-Host "❌ Package signature status: $($signature.Status)"
-              Write-Host "📝 Signature details: $($signature.StatusMessage)"
+              Write-Host "❌  Warning: Certificate subject doesn't match expected test certificate"
               exit 1
             }
+          } elseif ($signature.Status -eq "NotSigned") {
+            Write-Host "❌ Executable is not signed"
+            exit 1
+          } else {
+            Write-Host "❌ Executable signature status: $($signature.Status)"
+            Write-Host "📝 Signature details: $($signature.StatusMessage)"
+            exit 1
           }
       - uses: actions/upload-artifact@v4
         with:
