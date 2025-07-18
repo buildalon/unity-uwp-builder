@@ -11,7 +11,10 @@ JOBS_JSON=$(jq -c . <<'EOF'
   "certificate-type": ["default", "custom"],
   "exclude": [
     {"uwp-package-type": "upload", "certificate-type": "custom"}
-  ]
+  ],
+  "strategy": {
+    "fail-fast": false
+  }
 }
 EOF
 )
