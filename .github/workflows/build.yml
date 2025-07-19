@@ -34,8 +34,6 @@ jobs:
         with:
           path: ${{ env.BUILD_OUTPUT_PATH }}
           key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
-          restore-keys: |
-            unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - run: 'npm install -g openupm-cli'
         # Installs the Unity Editor based on your project version text file
         # sets -> env.UNITY_EDITOR_PATH
