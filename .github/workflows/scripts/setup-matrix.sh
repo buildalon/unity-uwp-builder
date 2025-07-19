@@ -119,9 +119,13 @@ for UNITY_VERSION in "${!UNITY_VERSION_JOBS[@]}"; do
     JOBS_ARRAY+=("$JOB_OBJECT")
 done
 
-# Output the grouped jobs array as JSON (not wrapped in a top-level object)
-JOBS_JSON=$(printf '%s\n' "${JOBS_ARRAY[@]}" | jq -s .)
+# Create final JSON structure with jobs as the top-level object
+JOBS_JSON=$(jq -c -n \
+    --argjson jobs "$(printf '%s\n' "${JOBS_ARRAY[@]}" | jq -s .)" \
+    '{
+        "jobs": $jobs
+    }')
 
 echo "Generated jobs JSON array:"
-echo "$JOBS_JSON" | jq .   # pretty-print for logs only
-echo "jobs=$JOBS_JSON" >> "$GITHUB_OUTPUT"  # compact, single line
+echo "$JOBS_JSON" | jq .
+echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"

@@ -26,8 +26,7 @@ jobs:
     needs: setup
     name: ${{ matrix.jobs.name }}
     strategy:
-      matrix:
-        jobs: ${{ fromJSON(needs.setup.outputs.jobs) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
