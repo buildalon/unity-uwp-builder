@@ -89,6 +89,10 @@ jobs:
             echo "::error::Failed to find build output path!"
             exit 1
           fi
+          if [ ! -d "${{ env.BUILD_OUTPUT_PATH }}" ]; then
+            echo "::error::Build output directory does not exist: ${{ env.BUILD_OUTPUT_PATH }}"
+            exit 1
+          fi
           echo "::group::Build Artifacts"
           ls -R "${{ env.BUILD_OUTPUT_PATH }}"
           echo "::endgroup::"
