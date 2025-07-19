@@ -70,7 +70,7 @@ jobs:
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
-          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK 10.0.22621.0'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version}}'
       - uses: microsoft/setup-msbuild@v2
         with:
           vs-version: '[15.0, )'
@@ -89,6 +89,10 @@ jobs:
           Export-PfxCertificate -cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $pwd
 
           Write-Host "Test certificate created at: $certPath"
+
+          Write-Host "::group::Build Artifacts
+          ls -R "${{ env.UNITY_PROJECT_PATH }}/Builds"
+          Write-Host "::endgroup::"
         shell: pwsh
         # builds visual studio project for UWP and packages it as an appx
       - uses: ./ # buildalon/unity-uwp-builder
@@ -99,7 +103,7 @@ jobs:
           package-type: ${{ matrix.uwp-package-type }}
           certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
           certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
-          windows-sdk-version: '10.0.22621.0'
+          windows-sdk-version: ${{ matrix.windows-sdk-version }}
       - name: Validate Outputs
         shell: bash
         run: |
@@ -158,7 +162,7 @@ jobs:
         with:
           retention-days: 1
           overwrite: true
-          name: ${{ matrix.name }}
+          name: ${{ matrix.unity-version }} ${{ matrix.name }}
           path: |
             ${{ github.workspace }}/**/*.log
             ${{ steps.uwp-build.outputs.output-directory }}

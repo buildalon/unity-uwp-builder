@@ -30080,24 +30080,6 @@ const main = async () => {
         catch (error) {
             throw new Error(`Solution file not found: "${buildPath}"`);
         }
-        const csprojGlobber = await glob.create(`${projectPath}/**/*.csproj`);
-        const csprojFiles = await csprojGlobber.glob();
-        if (csprojFiles.length === 0) {
-            core.warning(`No .csproj files found in the project. This may indicate that the project is not set up correctly.`);
-        }
-        for (const csprojFile of csprojFiles) {
-            core.startGroup(`Contents of ${csprojFile}`);
-            try {
-                const content = await fs.promises.readFile(csprojFile, `utf8`);
-                core.info(content);
-            }
-            catch (error) {
-                core.error(`Failed to read ${csprojFile}:\n${error}`);
-            }
-            finally {
-                core.endGroup();
-            }
-        }
         const appPackagesPath = path.join(projectPath, `AppPackages`);
         if (fs.existsSync(appPackagesPath)) {
             core.info(`Cleaning AppPackages directory: ${appPackagesPath}...`);

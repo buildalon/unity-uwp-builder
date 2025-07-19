@@ -24,6 +24,9 @@
     "default",
     "custom"
   ],
+  "windows-sdk-version": [
+    "10.0.22621.0"
+  ],
   "exclude": [
     {
       "uwp-package-type": "upload",
