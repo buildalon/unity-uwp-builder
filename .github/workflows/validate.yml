@@ -24,11 +24,11 @@ jobs:
   validate:
     if: needs.setup.outputs.jobs
     needs: setup
-    name: ${{ matrix.job.name }}
+    name: ${{ matrix.jobs.name }}
     strategy:
       matrix:
-        job: ${{ fromJSON(needs.setup.outputs.jobs) }}
+        jobs: ${{ fromJSON(needs.setup.outputs.jobs) }}
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      matrix: ${{ toJSON(matrix.job.matrix) }}
+      matrix: ${{ toJSON(matrix.jobs.matrix) }}

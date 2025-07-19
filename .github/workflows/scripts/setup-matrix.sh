@@ -123,5 +123,5 @@ done
 JOBS_JSON=$(printf '%s\n' "${JOBS_ARRAY[@]}" | jq -s .)
 
 echo "Generated jobs JSON array:"
-echo "$JOBS_JSON" | jq .
-echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"
+echo "$JOBS_JSON" | jq .   # pretty-print for logs only
+echo "jobs=$JOBS_JSON" >> "$GITHUB_OUTPUT"  # compact, single line
