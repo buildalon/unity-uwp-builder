@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: read
     env:
-      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Unity/Builds
+      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Unity/Builds/${{ matrix.build-target }}
       TEMPLATE_PATH: ''
       UNITY_PROJECT_PATH: '' # set by unity-setup action
     steps:
@@ -30,7 +30,7 @@ jobs:
       # Restore Unity build cache
       - name: Restore Unity Build Cache
         id: cache-restore
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.BUILD_OUTPUT_PATH }}
           key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
@@ -99,7 +99,7 @@ jobs:
       # Save Unity build outputs to cache if build was run
       - name: Save Unity Build Cache
         if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache/save@v4
         with:
           path: ${{ env.BUILD_OUTPUT_PATH }}
           key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
