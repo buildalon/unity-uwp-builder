@@ -22,10 +22,20 @@ jobs:
     permissions:
       contents: read
     env:
+      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Unity/Builds
       TEMPLATE_PATH: ''
       UNITY_PROJECT_PATH: '' # set by unity-setup action
     steps:
       - uses: actions/checkout@v4
+      # Restore Unity build cache
+      - name: Restore Unity Build Cache
+        id: cache-restore
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.BUILD_OUTPUT_PATH }}
+          key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
+          restore-keys: |
+            unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - run: 'npm install -g openupm-cli'
         # Installs the Unity Editor based on your project version text file
         # sets -> env.UNITY_EDITOR_PATH
@@ -59,18 +69,28 @@ jobs:
       - run: 'openupm add com.virtualmaker.buildalon'
         name: Add Build Pipeline Package
         working-directory: ${{ env.UNITY_PROJECT_PATH }}
+      # Only run Unity build if cache was not restored
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
+        if: steps.cache-restore.outputs.cache-hit != 'true'
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Validate'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Build'
+        if: steps.cache-restore.outputs.cache-hit != 'true'
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
-          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version}}'
+          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory ${{ env.BUILD_OUTPUT_PATH }} -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version }}'
+      # Save Unity build outputs to cache if build was run
+      - name: Save Unity Build Cache
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.BUILD_OUTPUT_PATH }}
+          key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - uses: microsoft/setup-msbuild@v2
         with:
           vs-version: '[15.0, )'
@@ -91,7 +111,7 @@ jobs:
           Write-Host "Test certificate created at: $certPath"
 
           Write-Host "::group::Build Artifacts"
-          ls -R "${{ env.UNITY_PROJECT_PATH }}/Builds"
+          ls -R "${{ env.BUILD_OUTPUT_PATH }}"
           Write-Host "::endgroup::"
         shell: pwsh
         # builds visual studio project for UWP and packages it as an appx
@@ -99,7 +119,7 @@ jobs:
         id: uwp-build
         with:
           architecture: ${{ matrix.uwp-arch }}
-          project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
+          project-path: ${{ env.BUILD_OUTPUT_PATH }}/WSAPlayer
           package-type: ${{ matrix.uwp-package-type }}
           certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
           certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
@@ -166,4 +186,4 @@ jobs:
           name: ${{ matrix.unity-version }} ${{ matrix.name }}
           path: |
             ${{ github.workspace }}/**/*.log
-            ${{ env.UNITY_PROJECT_PATH }}/Builds
+            ${{ env.BUILD_OUTPUT_PATH }}
