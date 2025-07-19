@@ -27,7 +27,6 @@ jobs:
       UNITY_PROJECT_PATH: '' # set by unity-setup action
     steps:
       - uses: actions/checkout@v4
-      # Restore Unity build cache
       - name: Restore Unity Build Cache
         id: cache
         uses: actions/cache/restore@v4
@@ -35,15 +34,15 @@ jobs:
           path: ${{ env.BUILD_OUTPUT_PATH }}
           key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - run: 'npm install -g openupm-cli'
-        # Installs the Unity Editor based on your project version text file
-        # sets -> env.UNITY_EDITOR_PATH
-        # sets -> env.UNITY_PROJECT_PATH
+        if: steps.cache.outputs.cache-hit != 'true'
       - uses: buildalon/unity-setup@v1
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           version-file: 'None'
           build-targets: ${{ matrix.build-target }}
           unity-version: ${{ matrix.unity-version }}
       - name: Find Unity Template Path
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           $rootPath = $env:UNITY_EDITOR_PATH -replace "Editor.*", ""
           Write-Host "ROOT_PATH=$rootPath"
@@ -53,21 +52,22 @@ jobs:
           $projectPath = "${{ github.workspace }}/Test Project"
           echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
         shell: pwsh
-        # Activates the installation with the provided credentials
       - uses: buildalon/activate-unity-license@v1
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           license: 'Personal'
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
       - uses: buildalon/unity-action@v1
+        if: steps.cache.outputs.cache-hit != 'true'
         name: Create Test Project
         with:
           log-name: 'create-test-project'
           args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
       - run: 'openupm add com.virtualmaker.buildalon'
+        if: steps.cache.outputs.cache-hit != 'true'
         name: Add Build Pipeline Package
         working-directory: ${{ env.UNITY_PROJECT_PATH }}
-      # Only run Unity build if cache was not restored
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
         if: steps.cache.outputs.cache-hit != 'true'
@@ -82,6 +82,12 @@ jobs:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory ${{ env.BUILD_OUTPUT_PATH }} -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version }}'
+      - name: Save Unity Build Cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.BUILD_OUTPUT_PATH }}
+          key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - name: Enumerate Build Directory
         shell: bash
         run: |
@@ -96,19 +102,12 @@ jobs:
           echo "::group::Build Artifacts"
           ls -R "${{ env.BUILD_OUTPUT_PATH }}"
           echo "::endgroup::"
-      # Save Unity build outputs to cache if build was run
-      - name: Save Unity Build Cache
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.BUILD_OUTPUT_PATH }}
-          key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - uses: microsoft/setup-msbuild@v2
         with:
           vs-version: '[15.0, )'
-      # Create a test certificate for custom certificate testing
       - name: Create Test Certificate
         if: matrix.certificate-type == 'custom'
+        shell: pwsh
         run: |
           $certPath = "${{ github.workspace }}/TestCert.pfx"
           $certPassword = "TestPassword123"
@@ -121,8 +120,6 @@ jobs:
           Export-PfxCertificate -cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $pwd
 
           Write-Host "Test certificate created at: $certPath"
-        shell: pwsh
-        # builds visual studio project for UWP and packages it as an appx
       - uses: ./ # buildalon/unity-uwp-builder
         id: uwp-build
         with:
