@@ -90,7 +90,7 @@ jobs:
 
           Write-Host "Test certificate created at: $certPath"
 
-          Write-Host "::group::Build Artifacts
+          Write-Host "::group::Build Artifacts"
           ls -R "${{ env.UNITY_PROJECT_PATH }}/Builds"
           Write-Host "::endgroup::"
         shell: pwsh
