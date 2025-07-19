@@ -127,7 +127,7 @@ jobs:
         id: uwp-build
         with:
           architecture: ${{ matrix.uwp-arch }}
-          project-path: ${{ env.BUILD_OUTPUT_PATH }}/WSAPlayer
+          project-path: ${{ env.BUILD_OUTPUT_PATH }}
           package-type: ${{ matrix.uwp-package-type }}
           certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
           certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
