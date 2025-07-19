@@ -14,12 +14,14 @@ INCLUDED_JOBS=()
 EXCLUDED_JOBS=()
 
 # using the BUILD_OPTIONS_JSON, create jobs for each combination
-for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]'); do
-    for UWP_ARCH in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-arch"[]'); do
-        for UWP_SUBTARGET in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-subtarget"[]'); do
-            for UWP_PACKAGE_TYPE in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-type"[]'); do
-                for UWP_PACKAGE_FORMAT in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-format"[]'); do
-                    for CERTIFICATE_TYPE in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]'); do
+
+# Properly handle unity-version values with spaces/parentheses
+while IFS= read -r UNITY_VERSION; do
+    while IFS= read -r UWP_ARCH; do
+        while IFS= read -r UWP_SUBTARGET; do
+            while IFS= read -r UWP_PACKAGE_TYPE; do
+                while IFS= read -r UWP_PACKAGE_FORMAT; do
+                    while IFS= read -r CERTIFICATE_TYPE; do
                         JOB=$(jq -c -n \
                             --arg name "(${UNITY_VERSION}) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $UWP_PACKAGE_FORMAT $CERTIFICATE_TYPE" \
                             --arg unity_version "${UNITY_VERSION}" \
@@ -61,12 +63,12 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
                         else
                             INCLUDED_JOBS+=("$JOB")
                         fi
-                    done
-                done
-            done
-        done
-    done
-done
+                    done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]')
+                done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-format"[]')
+            done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-type"[]')
+        done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-subtarget"[]')
+    done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-arch"[]')
+done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]')
 
 # { include: [...], exclude: [...] }
 MATRIX_JSON=$(jq -c -n \
