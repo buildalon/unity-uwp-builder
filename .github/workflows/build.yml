@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       # Restore Unity build cache
       - name: Restore Unity Build Cache
-        id: cache-restore
+        id: cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.BUILD_OUTPUT_PATH }}
@@ -70,14 +70,14 @@ jobs:
       # Only run Unity build if cache was not restored
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
-        if: steps.cache-restore.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Validate'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Build'
-        if: steps.cache-restore.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
@@ -98,7 +98,7 @@ jobs:
           echo "::endgroup::"
       # Save Unity build outputs to cache if build was run
       - name: Save Unity Build Cache
-        if: steps.cache-restore.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.BUILD_OUTPUT_PATH }}
