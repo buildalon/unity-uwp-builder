@@ -87,8 +87,9 @@ const main = async () => {
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
         if (useAppxFormat) {
-            core.info('Forcing /p:UseAppxFormat=true for appx output');
+            core.info('Forcing appx/appxbundle output');
             buildArgs.push(`/p:UseAppxFormat=true`);
+            buildArgs.push(`/p:UseMsixTool=false`);
         }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
@@ -160,6 +161,7 @@ const main = async () => {
                 break;
             case `sideload`:
                 if (useAppxFormat) {
+                    // Only accept .appxbundle or .appx for sideload/appx
                     executable = executables.find(file => file.endsWith(`.appxbundle`)) ||
                         executables.find(file => file.endsWith(`.appx`));
                 } else {

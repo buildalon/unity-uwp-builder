@@ -30123,8 +30123,9 @@ const main = async () => {
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
         if (useAppxFormat) {
-            core.info('Forcing /p:UseAppxFormat=true for appx output');
+            core.info('Forcing appx/appxbundle output');
             buildArgs.push(`/p:UseAppxFormat=true`);
+            buildArgs.push(`/p:UseMsixTool=false`);
         }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
