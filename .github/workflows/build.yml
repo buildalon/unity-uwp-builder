@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: write
+      contents: read
     env:
       TEMPLATE_PATH: ''
       UNITY_PROJECT_PATH: '' # set by unity-setup action
