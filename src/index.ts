@@ -87,9 +87,8 @@ const main = async () => {
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
         if (useAppxFormat) {
-            core.info('Forcing appx/appxbundle output');
+            core.info('use appx/appxbundle output');
             buildArgs.push(`/p:UseAppxFormat=true`);
-            buildArgs.push(`/p:UseMsixTool=false`);
         }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
@@ -137,16 +136,12 @@ const main = async () => {
             `${outputDirectory}/**/*.appxbundle`,
             `${outputDirectory}/**/*.msixbundle`,
             `${outputDirectory}/**/*.appxupload`,
-            `${outputDirectory}/**/*.msixupload`,
-            `!${outputDirectory}/**/dependencies/**`
+            `${outputDirectory}/**/*.msixupload`
         ];
         const executableGlobber = await glob.create(patterns.join(`\n`));
         const executables = await executableGlobber.glob();
         if (executables.length === 0) {
-            const expectedFileTypes = packageType === 'upload'
-                ? ['.appxupload', '.msixupload']
-                : ['.appxbundle', '.msixbundle', '.appx', '.msix'];
-            throw new Error(`No executable file found in "${outputDirectory}". Expected file types: ${expectedFileTypes.join(', ')}.`);
+            throw new Error(`No executable file found in "${outputDirectory}".`);
         }
         core.info(`Found executables:`);
         executables.forEach(executable => core.info(`  - "${executable}"`));
@@ -155,7 +150,9 @@ const main = async () => {
             case `upload`:
                 if (useAppxFormat) {
                     executable = executables.find(file => file.endsWith(`.appxupload`));
-                } else {
+                }
+                // fallback to msixupload
+                if (!executable) {
                     executable = executables.find(file => file.endsWith(`.msixupload`));
                 }
                 break;
@@ -164,7 +161,9 @@ const main = async () => {
                     // Only accept .appxbundle or .appx for sideload/appx
                     executable = executables.find(file => file.endsWith(`.appxbundle`)) ||
                         executables.find(file => file.endsWith(`.appx`));
-                } else {
+                }
+                // fallback to msix/msixbundle
+                if (!executable) {
                     executable = executables.find(file => file.endsWith(`.msixbundle`)) ||
                         executables.find(file => file.endsWith(`.msix`));
                 }

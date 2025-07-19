@@ -20,15 +20,13 @@ while IFS= read -r UNITY_VERSION; do
     while IFS= read -r UWP_ARCH; do
         while IFS= read -r UWP_SUBTARGET; do
             while IFS= read -r UWP_PACKAGE_TYPE; do
-                while IFS= read -r UWP_PACKAGE_FORMAT; do
                     while IFS= read -r CERTIFICATE_TYPE; do
                         JOB=$(jq -c -n \
-                            --arg name "(${UNITY_VERSION}) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $UWP_PACKAGE_FORMAT $CERTIFICATE_TYPE" \
+                            --arg name "(${UNITY_VERSION}) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $CERTIFICATE_TYPE" \
                             --arg unity_version "${UNITY_VERSION}" \
                             --arg uwp_arch "${UWP_ARCH}" \
                             --arg uwp_subtarget "${UWP_SUBTARGET}" \
                             --arg uwp_package_type "${UWP_PACKAGE_TYPE}" \
-                            --arg uwp_package_format "${UWP_PACKAGE_FORMAT}" \
                             --arg certificate_type "${CERTIFICATE_TYPE}" \
                             '{
                                 "name": $name,
@@ -38,7 +36,6 @@ while IFS= read -r UNITY_VERSION; do
                                 "uwp-arch": $uwp_arch,
                                 "uwp-subtarget": $uwp_subtarget,
                                 "uwp-package-type": $uwp_package_type,
-                                "uwp-package-format": $uwp_package_format,
                                 "certificate-type": $certificate_type
                             }')
                         # check if the job matches any exclusion rule
@@ -64,11 +61,10 @@ while IFS= read -r UNITY_VERSION; do
                             INCLUDED_JOBS+=("$JOB")
                         fi
                     done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]')
-                done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-format"[]')
-            done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-type"[]')
-        done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-subtarget"[]')
-    done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-arch"[]')
-done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]')
+                done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-type"[]')
+            done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-subtarget"[]')
+        done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-arch"[]')
+    done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]')
 
 # { include: [...], exclude: [...] }
 MATRIX_JSON=$(jq -c -n \

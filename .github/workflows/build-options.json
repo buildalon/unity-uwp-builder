@@ -20,10 +20,6 @@
     "sideload",
     "upload"
   ],
-  "uwp-package-format": [
-    "appx",
-    "msix"
-  ],
   "certificate-type": [
     "default",
     "custom"
