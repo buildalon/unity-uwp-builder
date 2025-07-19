@@ -22,27 +22,18 @@ jobs:
     permissions:
       contents: read
     env:
-      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Unity/Builds/${{ matrix.build-target }}
+      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
       TEMPLATE_PATH: ''
       UNITY_PROJECT_PATH: '' # set by unity-setup action
     steps:
       - uses: actions/checkout@v4
-      - name: Restore Unity Build Cache
-        id: cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.BUILD_OUTPUT_PATH }}
-          key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - run: 'npm install -g openupm-cli'
-        if: steps.cache.outputs.cache-hit != 'true'
       - uses: buildalon/unity-setup@v1
-        if: steps.cache.outputs.cache-hit != 'true'
         with:
           version-file: 'None'
           build-targets: ${{ matrix.build-target }}
           unity-version: ${{ matrix.unity-version }}
       - name: Find Unity Template Path
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           $rootPath = $env:UNITY_EDITOR_PATH -replace "Editor.*", ""
           Write-Host "ROOT_PATH=$rootPath"
@@ -53,41 +44,30 @@ jobs:
           echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
         shell: pwsh
       - uses: buildalon/activate-unity-license@v1
-        if: steps.cache.outputs.cache-hit != 'true'
         with:
           license: 'Personal'
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
       - uses: buildalon/unity-action@v1
-        if: steps.cache.outputs.cache-hit != 'true'
         name: Create Test Project
         with:
           log-name: 'create-test-project'
           args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
       - run: 'openupm add com.virtualmaker.buildalon'
-        if: steps.cache.outputs.cache-hit != 'true'
         name: Add Build Pipeline Package
         working-directory: ${{ env.UNITY_PROJECT_PATH }}
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Validate'
-        if: steps.cache.outputs.cache-hit != 'true'
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Validate'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
       - uses: buildalon/unity-action@v1
         name: '${{ matrix.build-target }}-Build'
-        if: steps.cache.outputs.cache-hit != 'true'
         with:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory ${{ env.BUILD_OUTPUT_PATH }} -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version }}'
-      - name: Save Unity Build Cache
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.BUILD_OUTPUT_PATH }}
-          key: unity-builds-${{ matrix.name }}-${{ matrix.unity-version }}
       - name: Enumerate Build Directory
         shell: bash
         run: |
