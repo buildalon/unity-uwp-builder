@@ -159,10 +159,11 @@ jobs:
             exit 1
           }
       - uses: actions/upload-artifact@v4
+        if: always() || cancelled()
         with:
           retention-days: 1
           overwrite: true
           name: ${{ matrix.unity-version }} ${{ matrix.name }}
           path: |
             ${{ github.workspace }}/**/*.log
-            ${{ steps.uwp-build.outputs.output-directory }}
+            ${{ env.UNITY_PROJECT_PATH }}/Builds
