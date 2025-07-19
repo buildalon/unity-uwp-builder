@@ -82,6 +82,16 @@ jobs:
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory ${{ env.BUILD_OUTPUT_PATH }} -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version }}'
+      - name: Enumerate Build Directory
+        shell: bash
+        run: |
+          if [ -z "${{ env.BUILD_OUTPUT_PATH }}" ]; then
+            echo "::error::Failed to find build output path!"
+            exit 1
+          fi
+          echo "::group::Build Artifacts"
+          ls -R "${{ env.BUILD_OUTPUT_PATH }}"
+          echo "::endgroup::"
       # Save Unity build outputs to cache if build was run
       - name: Save Unity Build Cache
         if: steps.cache-restore.outputs.cache-hit != 'true'
@@ -107,10 +117,6 @@ jobs:
           Export-PfxCertificate -cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $pwd
 
           Write-Host "Test certificate created at: $certPath"
-
-          Write-Host "::group::Build Artifacts"
-          ls -R "${{ env.BUILD_OUTPUT_PATH }}"
-          Write-Host "::endgroup::"
         shell: pwsh
         # builds visual studio project for UWP and packages it as an appx
       - uses: ./ # buildalon/unity-uwp-builder
