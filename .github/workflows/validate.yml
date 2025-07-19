@@ -20,12 +20,15 @@ jobs:
         shell: bash
         run: ./.github/workflows/scripts/setup-matrix.sh
     outputs:
-      matrix: ${{ steps.setup-jobs.outputs.matrix }}
+      jobs: ${{ steps.setup-jobs.outputs.jobs }}
   validate:
-    if: needs.setup.outputs.matrix
+    if: needs.setup.outputs.jobs
     needs: setup
-    name: validate
+    name: ${{ matrix.job.name }}
+    strategy:
+      matrix:
+        job: ${{ fromJSON(needs.setup.outputs.jobs).job }}
     secrets: inherit
     uses: ./.github/workflows/build.yml
     with:
-      matrix: ${{ needs.setup.outputs.matrix }}
+      matrix: ${{ toJSON(matrix.job.matrix) }}

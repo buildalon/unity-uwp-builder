@@ -9,20 +9,26 @@ fi
 
 BUILD_OPTIONS_JSON=$(jq -r '.' "$BUILD_OPTIONS_FILE")
 
-# initialize an array to hold all jobs
-INCLUDED_JOBS=()
-EXCLUDED_JOBS=()
+# initialize associative arrays to hold jobs grouped by unity version
+declare -A UNITY_VERSION_JOBS
+declare -A UNITY_VERSION_EXCLUDED_JOBS
 
 # using the BUILD_OPTIONS_JSON, create jobs for each combination
 
 # Properly handle unity-version values with spaces/parentheses
 while IFS= read -r UNITY_VERSION; do
+    # Initialize arrays for this unity version if not already done
+    if [[ -z "${UNITY_VERSION_JOBS[$UNITY_VERSION]}" ]]; then
+        UNITY_VERSION_JOBS[$UNITY_VERSION]=""
+        UNITY_VERSION_EXCLUDED_JOBS[$UNITY_VERSION]=""
+    fi
+
     while IFS= read -r UWP_ARCH; do
         while IFS= read -r UWP_SUBTARGET; do
             while IFS= read -r UWP_PACKAGE_TYPE; do
                     while IFS= read -r CERTIFICATE_TYPE; do
                         JOB=$(jq -c -n \
-                            --arg name "(${UNITY_VERSION}) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $CERTIFICATE_TYPE" \
+                            --arg name "$UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $CERTIFICATE_TYPE" \
                             --arg unity_version "${UNITY_VERSION}" \
                             --arg uwp_arch "${UWP_ARCH}" \
                             --arg uwp_subtarget "${UWP_SUBTARGET}" \
@@ -56,9 +62,19 @@ while IFS= read -r UNITY_VERSION; do
                             fi
                         done
                         if [[ "$EXCLUDE_MATCH" == true ]]; then
-                            EXCLUDED_JOBS+=("$JOB")
+                            if [[ -z "${UNITY_VERSION_EXCLUDED_JOBS[$UNITY_VERSION]}" ]]; then
+                                UNITY_VERSION_EXCLUDED_JOBS[$UNITY_VERSION]="$JOB"
+                            else
+                                UNITY_VERSION_EXCLUDED_JOBS[$UNITY_VERSION]="${UNITY_VERSION_EXCLUDED_JOBS[$UNITY_VERSION]}
+$JOB"
+                            fi
                         else
-                            INCLUDED_JOBS+=("$JOB")
+                            if [[ -z "${UNITY_VERSION_JOBS[$UNITY_VERSION]}" ]]; then
+                                UNITY_VERSION_JOBS[$UNITY_VERSION]="$JOB"
+                            else
+                                UNITY_VERSION_JOBS[$UNITY_VERSION]="${UNITY_VERSION_JOBS[$UNITY_VERSION]}
+$JOB"
+                            fi
                         fi
                     done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]')
                 done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-type"[]')
@@ -66,12 +82,50 @@ while IFS= read -r UNITY_VERSION; do
         done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-arch"[]')
     done < <(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]')
 
-# { include: [...], exclude: [...] }
-MATRIX_JSON=$(jq -c -n \
-    --argjson include "$(printf '%s\n' "${INCLUDED_JOBS[@]}" | jq -s .)" \
+# Create grouped jobs structure
+JOBS_ARRAY=()
+
+for UNITY_VERSION in "${!UNITY_VERSION_JOBS[@]}"; do
+    # Skip if this unity version has no included jobs
+    if [[ -z "${UNITY_VERSION_JOBS[$UNITY_VERSION]}" ]]; then
+        continue
+    fi
+
+    # Create job name
+    JOB_NAME="Build ${UNITY_VERSION}"
+
+    # Convert newline-separated job strings to JSON array
+    UNITY_JOBS_ARRAY="[]"
+    if [[ -n "${UNITY_VERSION_JOBS[$UNITY_VERSION]}" ]]; then
+        UNITY_JOBS_ARRAY=$(echo "${UNITY_VERSION_JOBS[$UNITY_VERSION]}" | jq -s .)
+    fi
+
+    # Create matrix for this unity version
+    UNITY_MATRIX=$(jq -c -n \
+        --argjson include "$UNITY_JOBS_ARRAY" \
+        '{
+            include: $include
+        }')
+
+    # Create job object and add to array
+    JOB_OBJECT=$(jq -c -n \
+        --arg name "$JOB_NAME" \
+        --argjson matrix "$UNITY_MATRIX" \
+        '{
+            "name": $name,
+            "matrix": $matrix
+        }')
+
+    JOBS_ARRAY+=("$JOB_OBJECT")
+done
+
+# Create final JSON structure with jobs as the top-level object
+JOBS_JSON=$(jq -c -n \
+    --argjson jobs "$(printf '%s\n' "${JOBS_ARRAY[@]}" | jq -s .)" \
     '{
-        include: $include
+        "jobs": $jobs
     }')
+
 echo "Generated jobs JSON:"
-echo "$MATRIX_JSON" | jq .
-echo "matrix=${MATRIX_JSON}" >> "$GITHUB_OUTPUT"
+echo "$JOBS_JSON" | jq .
+echo "jobs=${JOBS_JSON}" >> "$GITHUB_OUTPUT"
