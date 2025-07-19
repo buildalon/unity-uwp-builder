@@ -26,6 +26,8 @@ jobs:
     if: ${{ needs.setup.outputs.jobs }}
     needs: setup
     name: ${{ matrix.jobs.name }}
+    permissions:
+      contents: read
     strategy:
       matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
     secrets: inherit
