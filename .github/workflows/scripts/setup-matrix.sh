@@ -21,13 +21,13 @@ for UNITY_VERSION in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."unity-version"[]');
                 for UWP_PACKAGE_FORMAT in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."uwp-package-format"[]'); do
                     for CERTIFICATE_TYPE in $(echo "$BUILD_OPTIONS_JSON" | jq -r '."certificate-type"[]'); do
                         JOB=$(jq -c -n \
-                            --arg name "($UNITY_VERSION) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $UWP_PACKAGE_FORMAT $CERTIFICATE_TYPE" \
-                            --arg unity_version "$UNITY_VERSION" \
-                            --arg uwp_arch "$UWP_ARCH" \
-                            --arg uwp_subtarget "$UWP_SUBTARGET" \
-                            --arg uwp_package_type "$UWP_PACKAGE_TYPE" \
-                            --arg uwp_package_format "$UWP_PACKAGE_FORMAT" \
-                            --arg certificate_type "$CERTIFICATE_TYPE" \
+                            --arg name "(${UNITY_VERSION}) $UWP_ARCH $UWP_SUBTARGET $UWP_PACKAGE_TYPE $UWP_PACKAGE_FORMAT $CERTIFICATE_TYPE" \
+                            --arg unity_version "${UNITY_VERSION}" \
+                            --arg uwp_arch "${UWP_ARCH}" \
+                            --arg uwp_subtarget "${UWP_SUBTARGET}" \
+                            --arg uwp_package_type "${UWP_PACKAGE_TYPE}" \
+                            --arg uwp_package_format "${UWP_PACKAGE_FORMAT}" \
+                            --arg certificate_type "${CERTIFICATE_TYPE}" \
                             '{
                                 "name": $name,
                                 "os": "windows-latest",
