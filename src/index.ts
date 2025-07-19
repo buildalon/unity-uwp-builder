@@ -130,21 +130,30 @@ const main = async () => {
         const outputDirectory = path.join(projectPath, `AppPackages`);
         core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
-        const patterns = [
-            `${outputDirectory}/**/*.appx`,
-            `${outputDirectory}/**/*.msix`,
-            `${outputDirectory}/**/*.appxbundle`,
-            `${outputDirectory}/**/*.msixbundle`,
-            `${outputDirectory}/**/*.appxupload`,
-            `${outputDirectory}/**/*.msixupload`
-        ];
-        const executableGlobber = await glob.create(patterns.join(`\n`));
-        const executables = await executableGlobber.glob();
-        if (executables.length === 0) {
-            throw new Error(`No executable file found in "${outputDirectory}".`);
+
+        // Find the directory containing Install.ps1
+        const installScriptGlobber = await glob.create(`${outputDirectory}/**/Install.ps1`);
+        const installScripts = await installScriptGlobber.glob();
+        if (installScripts.length === 0) {
+            throw new Error(`No Install.ps1 found in "${outputDirectory}". Cannot determine main package directory.`);
         }
-        core.info(`Found executables:`);
+        // Use the first Install.ps1 found
+        const mainPackageDir = path.dirname(installScripts[0]);
+        core.info(`Main package directory: ${mainPackageDir}`);
+
+        // Only look for executables in the main package directory (not subdirectories)
+        const exts = [".appxbundle", ".msixbundle", ".appxupload", ".msixupload", ".appx", ".msix"];
+        const dirEntries = await fs.promises.readdir(mainPackageDir);
+        const executables = dirEntries
+            .filter(file => exts.some(ext => file.toLowerCase().endsWith(ext)))
+            .map(file => path.join(mainPackageDir, file));
+
+        if (executables.length === 0) {
+            throw new Error(`No executable file found in main package directory: "${mainPackageDir}".`);
+        }
+        core.info(`Found executables in main package directory:`);
         executables.forEach(executable => core.info(`  - "${executable}"`));
+
         let executable: string | undefined;
         switch (packageType) {
             case `upload`:
@@ -170,7 +179,7 @@ const main = async () => {
                 break;
         }
         if (!executable) {
-            throw new Error(`No matching executable found for package type "${packageType}".`);
+            throw new Error(`No matching executable found for package type "${packageType}" in main package directory.`);
         }
         core.info(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);
