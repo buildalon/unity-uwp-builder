@@ -55,11 +55,6 @@ const main = async () => {
         const useAppxFormat = packageFormat === 'appx';
         core.info(`Requested package format: ${packageFormat}`);
         core.info(`Requested package type: ${packageType}`);
-        const publisherDisplayName = core.getInput('publisher-display-name');
-        if (publisherDisplayName) {
-            core.debug(`publisher-display-name: "${publisherDisplayName}"`);
-            buildArgs.push(`/p:PublisherDisplayName=\"${publisherDisplayName}\"`);
-        }
         switch (packageType) {
             case `upload`:
                 buildArgs.push(

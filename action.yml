@@ -36,9 +36,6 @@ inputs:
   windows-sdk-version:
     description: 'The Windows SDK version to use for building. If not specified, the latest available SDK version will be automatically detected and used.'
     required: false
-  publisher-display-name:
-    description: 'The publisher display name to use when signing the package. Overrides the default value in the manifest.'
-    required: false
 outputs:
   executable:
     description: The path to the generated executable.
