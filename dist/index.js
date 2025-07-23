@@ -30119,7 +30119,7 @@ const main = async () => {
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.debug(`additional-args: "${additionalArgs}"`);
-            buildArgs.push(...additionalArgs.split(` `));
+            buildArgs.push(...additionalArgs);
         }
         const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
         let windowsSDKVersion = null;
@@ -30188,7 +30188,7 @@ const main = async () => {
         }
         core.info(`Found bundles:`);
         bundles.forEach(bundle => core.info(`  - "${bundle}"`));
-        core.setOutput(`bundles`, JSON.stringify(bundles));
+        core.setOutput(`bundles`, bundles);
     }
     catch (error) {
         core.setFailed(error);
