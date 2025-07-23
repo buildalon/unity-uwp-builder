@@ -27,7 +27,6 @@ steps:
   - name: print outputs
     shell: bash
     run: |
-      echo "Bundles: ${{ steps.uwp-build.outputs.bundles }}"
       echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
       ls -R "${{ steps.uwp-build.outputs.output-directory }}"
 ```
@@ -47,5 +46,4 @@ steps:
 
 ### outputs
 
-- `bundles`: The paths to the generated appx bundles in json array.
 - `output-directory`: The path to the package output directory.

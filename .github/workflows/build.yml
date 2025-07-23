@@ -40,8 +40,6 @@ jobs:
           $templatePath = Get-ChildItem -Recurse -Filter "com.unity.template.3d*.tgz" -Path $rootPath | Select-Object -First 1 | Select-Object -ExpandProperty FullName
           Write-Host "TEMPLATE_PATH=$templatePath"
           echo "TEMPLATE_PATH=$templatePath" >> $env:GITHUB_ENV
-          $projectPath = "${{ github.workspace }}/Test Project"
-          echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
         shell: pwsh
       - uses: buildalon/activate-unity-license@v1
         with:
@@ -113,29 +111,6 @@ jobs:
         shell: bash
         run: |
           set -e
-          BUNDLES='${{ steps.uwp-build.outputs.bundles }}'
-
-          if [ -z "${BUNDLES}" ]; then
-            echo "❌ uwp-build.outputs.bundles is empty!"
-          else
-            echo "✅ Bundles: ${BUNDLES}"
-          fi
-
-          ANY_NOT_FOUND=false
-          for bundle in $(echo "${BUNDLES}" | jq -r '.[]'); do
-            if [ ! -f "${bundle}" ]; then
-              echo "  - ❌ ${bundle}"
-              ANY_NOT_FOUND=true
-            else
-              echo "  - ✅ ${bundle}"
-            fi
-          done
-
-          if [ "${ANY_NOT_FOUND}" = true ]; then
-            echo "❌ Some bundles were not found!"
-            exit 1
-          fi
-
           OUTPUT_DIR="${{ steps.uwp-build.outputs.output-directory }}"
           if [ -z "${OUTPUT_DIR}" ]; then
             echo "❌ No output directory found at ${OUTPUT_DIR}"
@@ -148,21 +123,20 @@ jobs:
         if: matrix.certificate-type == 'custom' && matrix.uwp-package-type == 'sideload'
         shell: pwsh
         run: |
-          $bundlesJson = "${{ steps.uwp-build.outputs.bundles }}"
-          $bundles = $null
-          try {
-            $bundles = $bundlesJson | ConvertFrom-Json
-          } catch {
-            Write-Host "❌ Failed to parse bundles output as JSON: $bundlesJson"
+          OUTPUT_DIR="${{ steps.uwp-build.outputs.output-directory }}"
+
+          if (-not (Test-Path $OUTPUT_DIR)) {
+            Write-Host "❌ Output directory does not exist: $OUTPUT_DIR"
             exit 1
           }
 
-          if (-not $bundles -or $bundles.Count -eq 0) {
-            Write-Host "❌ No bundles found to validate."
+          # get .appx, .appxbundle, .appxupload, .msix, .msixbundle, .msixupload files
+          $bundles = Get-ChildItem -Path $OUTPUT_DIR -Recurse -Include *.appx, *.appxbundle, *.appxupload, *.msix, *.msixbundle, *.msixupload | Select-Object -ExpandProperty FullName
+          if ($bundles.Count -eq 0) {
+            Write-Host "❌ No bundles found in output directory: $OUTPUT_DIR"
             exit 1
           }
 
-          $allValid = $true
           foreach ($bundle in $bundles) {
             Write-Host "🔍 Validating certificate for bundle: $bundle"
             if (-not (Test-Path $bundle)) {

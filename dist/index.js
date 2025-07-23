@@ -30090,28 +30090,29 @@ const main = async () => {
         const configuration = core.getInput(`configuration`, { required: true });
         const buildArgs = [
             `/t:Build`,
+            `/p:AppxBundle=Always`,
+            `/p:Configuration=${configuration}`,
         ];
-        const platform = core.getInput(`platform`) || 'Any CPU';
-        core.debug(`platform: "${platform}"`);
-        let AppxBundlePlatforms = 'x64|ARM64|ARM';
-        if (platform !== 'Any CPU') {
-            AppxBundlePlatforms = platform;
+        const platform = core.getInput(`platform`);
+        if (platform) {
+            core.debug(`platform: "${platform}"`);
+            buildArgs.push(`/p:Platform=${platform}`);
         }
-        core.debug(`AppxBundlePlatforms: "${AppxBundlePlatforms}"`);
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
         core.info(`Requested package type: ${packageType}`);
         const certificatePath = await getCertificatePath(projectPath);
         switch (packageType) {
             case `upload`:
-                buildArgs.push(`/p:Configuration=Master`, `/p:AppxBundle=Always`, `/p:Platform="${platform}"`, `/p:AppxBundlePlatforms="${AppxBundlePlatforms}"`, `/p:UapAppxPackageBuildMode=StoreUpload`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`, `/p:GenerateTestCertificate=false`);
+                buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`);
                 break;
             case `sideload`:
-                buildArgs.push(`/p:Configuration=${configuration}`, `/p:AppxBundle=Always`, `/p:Platform="${platform}"`, `/p:AppxBundlePlatforms="${AppxBundlePlatforms}"`, `/p:UapAppxPackageBuildMode=SideloadOnly`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`, `/p:GenerateTestCertificate=false`);
+                buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`);
                 break;
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
+        buildArgs.push(`/p:GenerateTestCertificate=false`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
         const certificatePassword = core.getInput(`certificate-password`);
         if (certificatePassword) {
             buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
