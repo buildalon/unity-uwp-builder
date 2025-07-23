@@ -30166,24 +30166,28 @@ const main = async () => {
         core.setOutput(`output-directory`, outputDirectory);
         let executables = [];
         let executable;
-        const uploadGlobber = await glob.create(path.join(outputDirectory, '*.{appxupload,msixupload}'));
+        const uploadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxupload,msixupload}'));
         executables = await uploadGlobber.glob();
         if (executables.length > 0) {
-            core.info(`Found upload executables in main package directory:`);
+            core.info(`Found upload executables in package directory:`);
             executables.forEach(executable => core.info(`  - "${executable}"`));
             executable = executables[0];
         }
         if (!executable) {
-            const sideloadGlobber = await glob.create(path.join(outputDirectory, '*.{appxbundle,msixbundle,appx,msix}'));
+            const sideloadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxbundle,msixbundle,appx,msix}'));
             executables = await sideloadGlobber.glob();
             if (executables.length > 0) {
-                core.info(`Found sideload executables in main package directory:`);
+                core.info(`Found sideload executables in package directory:`);
                 executables.forEach(executable => core.info(`  - "${executable}"`));
                 executable = executables[0];
             }
         }
         if (!executable) {
-            throw new Error(`No matching executable found for package type "${packageType}" in main package directory.`);
+            const allFilesGlobber = await glob.create(path.join(outputDirectory, '**/*'));
+            const allFiles = await allFilesGlobber.glob();
+            core.error(`No matching executable found. Available files in package directory:`);
+            allFiles.forEach(file => core.info(`  - "${file}"`));
+            throw new Error(`No matching executable found for package type "${packageType}" in package directory.`);
         }
         core.info(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);

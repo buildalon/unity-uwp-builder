@@ -133,24 +133,31 @@ const main = async () => {
         // Use globber to find *upload files first, then fall back to other extensions
         let executables: string[] = [];
         let executable: string | undefined;
-        const uploadGlobber = await glob.create(path.join(outputDirectory, '*.{appxupload,msixupload}'));
+        // Search recursively for upload files
+        const uploadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxupload,msixupload}'));
         executables = await uploadGlobber.glob();
         if (executables.length > 0) {
-            core.info(`Found upload executables in main package directory:`);
+            core.info(`Found upload executables in package directory:`);
             executables.forEach(executable => core.info(`  - "${executable}"`));
             executable = executables[0];
         }
         if (!executable) {
-            const sideloadGlobber = await glob.create(path.join(outputDirectory, '*.{appxbundle,msixbundle,appx,msix}'));
+            // Search recursively for sideload files
+            const sideloadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxbundle,msixbundle,appx,msix}'));
             executables = await sideloadGlobber.glob();
             if (executables.length > 0) {
-                core.info(`Found sideload executables in main package directory:`);
+                core.info(`Found sideload executables in package directory:`);
                 executables.forEach(executable => core.info(`  - "${executable}"`));
                 executable = executables[0];
             }
         }
         if (!executable) {
-            throw new Error(`No matching executable found for package type "${packageType}" in main package directory.`);
+            // print all the files in the output directory
+            const allFilesGlobber = await glob.create(path.join(outputDirectory, '**/*'));
+            const allFiles = await allFilesGlobber.glob();
+            core.error(`No matching executable found. Available files in package directory:`);
+            allFiles.forEach(file => core.info(`  - "${file}"`));
+            throw new Error(`No matching executable found for package type "${packageType}" in package directory.`);
         }
         core.info(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);
