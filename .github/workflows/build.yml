@@ -99,6 +99,10 @@ jobs:
           $pwd = ConvertTo-SecureString -String $certPassword -Force -AsPlainText
           Export-PfxCertificate -cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $pwd
 
+          # Import the certificate into Trusted Root Certification Authorities so it is trusted for validation
+          Import-PfxCertificate -FilePath $certPath -CertStoreLocation "Cert:\LocalMachine\Root" -Password $pwd | Out-Null
+          Write-Host "Test certificate imported to Trusted Root Certification Authorities."
+
           Write-Host "Test certificate created at: $certPath"
       - uses: ./ # buildalon/unity-uwp-builder
         id: uwp-build
@@ -140,12 +144,20 @@ jobs:
           }
 
           foreach ($bundle in $bundles) {
-            Write-Host "🔍 Validating certificate for bundle: $bundle"
+            # Skip Microsoft dependency packages
+            if ($bundle -match "Microsoft\.VCLibs\..*\.appx$") {
+              Write-Host "⏭️ Skipping Microsoft dependency package: $bundle"
+              continue
+            }
+
+            Write-Host "::group::🔍 Validating certificate for bundle: $bundle"
             if (-not (Test-Path $bundle)) {
               Write-Host "❌ Bundle not found: $bundle"
+              Write-Host "::endgroup::"
               $allValid = $false
               continue
             }
+
             $signature = Get-AuthenticodeSignature -FilePath $bundle
             if ($signature.Status -eq "Valid") {
               Write-Host "✅ Bundle is properly signed"
@@ -154,8 +166,9 @@ jobs:
               Write-Host "📅 Certificate Valid From: $($signature.SignerCertificate.NotBefore)"
               Write-Host "📅 Certificate Valid To: $($signature.SignerCertificate.NotAfter)"
               Write-Host "🔑 Certificate Thumbprint: $($signature.SignerCertificate.Thumbprint)"
+
               if ($signature.SignerCertificate.Subject -like "*TestPublisher*") {
-                Write-Host "✅ Confirmed: Custom test certificate was used successfully!"
+                Write-Host "✅✅ Confirmed: Custom test certificate was used successfully!"
               } else {
                 Write-Host "❌  Warning: Certificate subject doesn't match expected test certificate"
                 $allValid = $false
@@ -168,6 +181,8 @@ jobs:
               Write-Host "📝 Signature details: $($signature.StatusMessage)"
               $allValid = $false
             }
+
+            Write-Host "::endgroup::"
           }
           if (-not $allValid) {
             Write-Host "❌ One or more bundles failed certificate validation."
