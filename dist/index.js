@@ -30087,6 +30087,13 @@ const main = async () => {
         }
         let projectName = path.basename(solution, `.sln`);
         core.debug(`projectName: "${projectName}"`);
+        const vcxprojPath = path.join(projectPath, `${projectName}.vcxproj`);
+        try {
+            await fs.promises.access(vcxprojPath, fs.constants.R_OK);
+        }
+        catch (error) {
+            throw new Error(`VCXProj file not found: "${vcxprojPath}"`);
+        }
         const configuration = core.getInput(`configuration`, { required: true });
         const buildArgs = [
             `/t:Build`,
@@ -30122,6 +30129,10 @@ const main = async () => {
             core.debug(`additional-args: "${additionalArgs}"`);
             buildArgs.push(...additionalArgs);
         }
+        const storeAssociationPath = core.getInput('store-association-path');
+        if (storeAssociationPath) {
+            await copyAndEnsureStoreAssociation(vcxprojPath, storeAssociationPath);
+        }
         const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
         let windowsSDKVersion = null;
         if (specifiedSDKVersion) {
@@ -30146,7 +30157,6 @@ const main = async () => {
         if (windowsSDKVersion) {
             const match = windowsSDKVersion.match(/^10\.0\.(\d+)\.\d+$/);
             if (match && parseInt(match[1], 10) >= 26100) {
-                const vcxprojPath = path.join(projectPath);
                 await removeWindowsMobileSDKReference(vcxprojPath);
             }
         }
@@ -30224,6 +30234,57 @@ async function getCertificatePath(projectPath) {
     }
     core.info(`Using certificate: ${certificatePath}`);
     return certificatePath;
+}
+async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
+    const destFile = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
+    try {
+        if (!fs.existsSync(destFile) || (await fs.promises.readFile(destFile, 'utf8')) !== (await fs.promises.readFile(sourcePath, 'utf8'))) {
+            await fs.promises.copyFile(sourcePath, destFile);
+            core.info(`Copied StoreAssociationFile to ${destFile}`);
+        }
+        else {
+            core.info(`StoreAssociationFile already exists and is up to date.`);
+        }
+    }
+    catch (error) {
+        core.warning(`Failed to copy StoreAssociationFile: ${error}`);
+        return;
+    }
+    let content;
+    try {
+        content = await fs.promises.readFile(vcxprojPath, 'utf8');
+    }
+    catch (error) {
+        core.warning(`Failed to read vcxproj file: ${error}`);
+        return;
+    }
+    if (content.includes('Package.StoreAssociation.xml')) {
+        core.info('Package.StoreAssociation.xml already referenced in vcxproj.');
+        return;
+    }
+    core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
+    const itemGroupRegex = /<ItemGroup>([\s\S]*?)<\/ItemGroup>/g;
+    let itemGroupMatch = null;
+    let hasStoreAssociationFile = false;
+    while ((itemGroupMatch = itemGroupRegex.exec(content)) !== null) {
+        if (itemGroupMatch[1].includes('StoreAssociationFile')) {
+            hasStoreAssociationFile = true;
+            break;
+        }
+    }
+    if (!hasStoreAssociationFile) {
+        const itemGroup = `  <ItemGroup>
+    <None Include="Package.StoreAssociation.xml" />
+  </ItemGroup>`;
+        content = content.replace('</Project>', `${itemGroup}</Project>`);
+    }
+    try {
+        await fs.promises.writeFile(vcxprojPath, content, 'utf8');
+        core.info(`Updated ${vcxprojPath} to include StoreAssociationFile reference.`);
+    }
+    catch (error) {
+        core.warning(`Failed to update ${vcxprojPath}: ${error}`);
+    }
 }
 async function isWindowsSDKVersionAvailable(version) {
     try {

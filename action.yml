@@ -30,6 +30,9 @@ inputs:
   additional-args:
     description: Additional arguments to pass to the msbuild command.
     required: false
+  store-association-path:
+    description: 'The path to the Package.StoreAssociation.xml file. Optional.'
+    required: false
 outputs:
   bundles:
     description: The paths to the generated bundles in json array.
