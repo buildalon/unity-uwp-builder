@@ -125,17 +125,17 @@ jobs:
         if: matrix.certificate-type == 'custom' && matrix.uwp-package-type == 'sideload'
         shell: pwsh
         run: |
-          OUTPUT_DIR="${{ steps.uwp-build.outputs.output-directory }}"
+          $output_dir="${{ steps.uwp-build.outputs.output-directory }}"
 
-          if (-not (Test-Path $OUTPUT_DIR)) {
-            Write-Host "❌ Output directory does not exist: $OUTPUT_DIR"
+          if (-not (Test-Path $output_dir)) {
+            Write-Host "❌ Output directory does not exist: $output_dir"
             exit 1
           }
 
           # get .appx, .appxbundle, .appxupload, .msix, .msixbundle, .msixupload files
-          $bundles = Get-ChildItem -Path $OUTPUT_DIR -Recurse -Include *.appx, *.appxbundle, *.appxupload, *.msix, *.msixbundle, *.msixupload | Select-Object -ExpandProperty FullName
+          $bundles = Get-ChildItem -Path $output_dir -Recurse -Include *.appx, *.appxbundle, *.appxupload, *.msix, *.msixbundle, *.msixupload | Select-Object -ExpandProperty FullName
           if ($bundles.Count -eq 0) {
-            Write-Host "❌ No bundles found in output directory: $OUTPUT_DIR"
+            Write-Host "❌ No bundles found in output directory: $output_dir"
             exit 1
           }
 
