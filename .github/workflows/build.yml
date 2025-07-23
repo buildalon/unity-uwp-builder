@@ -143,6 +143,8 @@ jobs:
             exit 1
           }
 
+          $allValid = $true
+
           foreach ($bundle in $bundles) {
             # Skip Microsoft dependency packages
             if ($bundle -match "Microsoft\.VCLibs\..*\.appx$") {
@@ -151,6 +153,7 @@ jobs:
             }
 
             Write-Host "::group::🔍 Validating certificate for bundle: $bundle"
+
             if (-not (Test-Path $bundle)) {
               Write-Host "❌ Bundle not found: $bundle"
               Write-Host "::endgroup::"
@@ -178,10 +181,10 @@ jobs:
               $allValid = $false
             } else {
               Write-Host "❌ Bundle signature status: $($signature.Status)"
-              Write-Host "📝 Signature details: $($signature.StatusMessage)"
               $allValid = $false
             }
 
+            Write-Host "📝 Signature details: $($signature.StatusMessage)"
             Write-Host "::endgroup::"
           }
           if (-not $allValid) {
