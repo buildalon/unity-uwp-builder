@@ -19,11 +19,6 @@ inputs:
     description: 'The type of package to generate. Can be: `sideload` or `upload`. Defaults to `sideload`.'
     required: false
     default: 'sideload'
-  package-format:
-    description: 'The package format to use. Can be: `appx` or `msix`. Defaults to `appx` for better Unity UWP compatibility. APPX is recommended for sideloading Unity UWP projects.'
-    required: false
-    default: 'appx'
-    deprecationMessage: 'appx is deprecated, and msix will be used by default in the future.'
   certificate-path:
     description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate.'
     required: false
