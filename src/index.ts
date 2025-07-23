@@ -252,6 +252,52 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
     } catch (error) {
         core.warning(`Failed to update ${vcxprojPath}: ${error}`);
     }
+    // Step 1: Extract Identity info from StoreAssociationFile and update appxmanifest (without changing version)
+    const appxManifestPath = path.join(path.dirname(vcxprojPath), 'Package.appxmanifest');
+    try {
+        const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+        // Extract MainPackageIdentityName and Publisher from StoreAssociationFile
+        const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
+        const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
+        if (nameMatch && publisherMatch) {
+            const name = nameMatch[1];
+            const publisher = publisherMatch[1];
+            // Read appxmanifest
+            let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
+            // Update Name and Publisher in <Identity> tag, but keep Version
+            appxManifestContent = appxManifestContent.replace(
+                /<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/,
+                (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`
+            );
+            await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
+            core.info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
+        } else {
+            core.warning(`Could not find MainPackageIdentityName or Publisher in StoreAssociationFile.`);
+        }
+    } catch (error) {
+        core.warning(`Failed to update Package.appxmanifest Identity: ${error}`);
+    }
+
+    // Step 2: Extract Version from appxmanifest and update StoreAssociationFile
+    try {
+        const appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
+        const identityRegex = /<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/;
+        const match = identityRegex.exec(appxManifestContent);
+        if (match) {
+            const version = match[3];
+            let storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+            storeAssociationContent = storeAssociationContent.replace(
+                /<PackageMaxArchitectureVersion>[^<]+<\/PackageMaxArchitectureVersion>/,
+                `<PackageMaxArchitectureVersion>${version}</PackageMaxArchitectureVersion>`
+            );
+            await fs.promises.writeFile(destFile, storeAssociationContent, 'utf8');
+            core.info(`Updated ${destFile} with Version from Package.appxmanifest.`);
+        } else {
+            core.warning(`No Identity found in Package.appxmanifest.`);
+        }
+    } catch (error) {
+        core.warning(`Failed to update StoreAssociationFile with version: ${error}`);
+    }
 }
 
 /**
