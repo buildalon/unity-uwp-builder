@@ -142,21 +142,12 @@ const main = async () => {
         }
         core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
-        const bundles: string[] = [];
-        const uploadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxupload,msixupload}'));
-        const uploadGlobs = await uploadGlobber.glob();
-        if (uploadGlobs.length > 0) {
-            core.info(`Found upload executables in package directory:`);
-            uploadGlobs.forEach(executable => core.info(`  - "${executable}"`));
-            bundles.push(...uploadGlobs);
-        }
-        const bundleGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxbundle,msixbundle,appx,msix}'));
-        const bundleGlobs = await bundleGlobber.glob();
-        if (bundleGlobs.length > 0) {
-            core.info(`Found sideload executables in package directory:`);
-            bundleGlobs.forEach(executable => core.info(`  - "${executable}"`));
-            bundles.push(...bundleGlobs);
-        }
+        const allGlobber = await glob.create(path.join(outputDirectory, '**/*'));
+        const allFiles = await allGlobber.glob();
+        core.info(`All files found in output directory:`);
+        allFiles.forEach(file => core.info(`  - "${file}"`));
+        const bundleExts = ['appxupload', 'msixupload', 'appxbundle', 'msixbundle', 'appx', 'msix'];
+        const bundles = allFiles.filter(f => bundleExts.some(ext => f.toLowerCase().endsWith(`.${ext}`)));
         if (bundles.length === 0) {
             throw new Error(`No bundle files found in output directory: "${outputDirectory}"!`);
         }
