@@ -19,9 +19,10 @@ steps:
   - uses: buildalon/unity-uwp-builder@v2
     id: uwp-build
     with:
-      project-path: '/path/to/your/build/output/directory'
-      architecture: 'x64|ARM64'
-      package-type: 'upload'
+      # The directory that contains the exported visual studio project from Unity.
+      project-path: '/path/to/your/build/output/directory/**/*.sln'
+      platform: 'Any CPU' # or 'x86', 'x64', 'ARM', 'ARM64'
+      package-type: 'upload' # or 'sideload'
 
   - name: print outputs
     shell: bash
@@ -37,7 +38,7 @@ steps:
 | ---- | ----------- | -------- |
 | `project-path` | The directory that contains the exported visual studio project from Unity. | true |
 | `configuration` | The configuration to use when building the visual studio project. | Defaults to `Master`. |
-| `architecture` | The architecture to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. | Defaults to `x64\|ARM64`. |
+| `platform` | The platform to use when building the visual studio project. Can be: `Any CPU`, `x86`, `x64`, `ARM`, or `ARM64`. | Defaults to `Any CPU`. |
 | `package-type` | The type of package to generate. Can be: `sideload` or `upload`. | Defaults to `sideload`. |
 | `certificate-path` | The path to the certificate to use when packaging the UWP project. | Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate. |
 | `certificate-password` | The password for the certificate. | Required when providing your own certificate. |

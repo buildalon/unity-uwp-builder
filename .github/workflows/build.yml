@@ -103,7 +103,7 @@ jobs:
       - uses: ./ # buildalon/unity-uwp-builder
         id: uwp-build
         with:
-          architecture: ${{ matrix.uwp-arch }}
+          platform: ${{ matrix.uwp-arch }}
           project-path: ${{ env.BUILD_OUTPUT_PATH }}
           package-type: ${{ matrix.uwp-package-type }}
           certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}

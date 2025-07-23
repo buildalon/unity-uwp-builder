@@ -39,11 +39,13 @@ const main = async () => {
         const buildArgs = [
             `/t:Build`,
         ];
-        const architecture = core.getInput(`architecture`);
-        if (architecture) {
-            core.debug(`architecture: "${architecture}"`);
-            buildArgs.push(`/p:Platform=${architecture}`);
+        const platform = core.getInput(`platform`) || 'Any CPU';
+        core.debug(`platform: "${platform}"`);
+        let AppxBundlePlatforms = 'x64|ARM64|ARM';
+        if (platform !== 'Any CPU') {
+            AppxBundlePlatforms = platform;
         }
+        core.debug(`AppxBundlePlatforms: "${AppxBundlePlatforms}"`);
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
         core.info(`Requested package type: ${packageType}`);
@@ -52,9 +54,9 @@ const main = async () => {
             case `upload`:
                 buildArgs.push(
                     `/p:Configuration=Master`,
-                    `/p:Platform="${architecture || 'x64|ARM64'}"`,
                     `/p:AppxBundle=Always`,
-                    `/p:AppxBundlePlatforms="${architecture || 'x64|ARM64'}"`,
+                    `/p:Platform="${platform}"`,
+                    `/p:AppxBundlePlatforms="${AppxBundlePlatforms}"`,
                     `/p:UapAppxPackageBuildMode=StoreUpload`,
                     `/p:AppxPackageSigningEnabled=true`,
                     `/p:PackageCertificateThumbprint=""`,
@@ -65,9 +67,9 @@ const main = async () => {
             case `sideload`:
                 buildArgs.push(
                     `/p:Configuration=${configuration}`,
-                    `/p:Platform="${architecture || 'x64|ARM64'}"`,
                     `/p:AppxBundle=Always`,
-                    `/p:AppxBundlePlatforms="${architecture || 'x64|ARM64'}"`,
+                    `/p:Platform="${platform}"`,
+                    `/p:AppxBundlePlatforms="${AppxBundlePlatforms}"`,
                     `/p:UapAppxPackageBuildMode=SideloadOnly`,
                     `/p:AppxPackageSigningEnabled=true`,
                     `/p:PackageCertificateThumbprint=""`,
