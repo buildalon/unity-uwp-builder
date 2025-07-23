@@ -112,56 +112,92 @@ jobs:
       - name: Validate Outputs
         shell: bash
         run: |
-          EXECUTABLE="${{ steps.uwp-build.outputs.executable }}"
-          if [ -z "${EXECUTABLE}" ]; then
-            echo "No executable found."
+          set -e
+          BUNDLES="${{ steps.uwp-build.outputs.bundles }}"
+
+          if [ -z "${BUNDLES}" ]; then
+            echo "❌ uwp-build.outputs.bundles is empty!"
           else
-            echo "Executable: ${EXECUTABLE}"
+            echo "✅ Bundles: ${BUNDLES}"
           fi
-          # verify the executable file extension based on the package format
+
+          ANY_NOT_FOUND=false
+          for bundle in $(echo "${BUNDLES}" | jq -r '.[]'); do
+            if [ ! -f "${bundle}" ]; then
+              echo "  - ❌ ${bundle}"
+              ANY_NOT_FOUND=true
+            else
+              echo "  - ✅ ${bundle}"
+            fi
+          done
+
+          if [ "${ANY_NOT_FOUND}" = true ]; then
+            echo "❌ Some bundles were not found!"
+            exit 1
+          fi
+
           OUTPUT_DIR="${{ steps.uwp-build.outputs.output-directory }}"
           if [ -z "${OUTPUT_DIR}" ]; then
-            echo "No output directory found."
+            echo "❌ No output directory found at ${OUTPUT_DIR}"
           else
-            echo "Output Directory: ${OUTPUT_DIR}"
+            echo "✅ Output Directory: ${OUTPUT_DIR}"
           fi
+
           ls -R "${OUTPUT_DIR}"
       - name: Validate Certificate Usage
         if: matrix.certificate-type == 'custom' && matrix.uwp-package-type == 'sideload'
         shell: pwsh
         run: |
-          $executable = "${{ steps.uwp-build.outputs.executable }}"
-          Write-Host "🔍 Validating certificate for executable: $executable"
-
-          if (-not (Test-Path $executable)) {
-            Write-Host "❌ Executable not found: $executable"
+          $bundlesJson = "${{ steps.uwp-build.outputs.bundles }}"
+          $bundles = $null
+          try {
+            $bundles = $bundlesJson | ConvertFrom-Json
+          } catch {
+            Write-Host "❌ Failed to parse bundles output as JSON: $bundlesJson"
             exit 1
           }
 
-          $signature = Get-AuthenticodeSignature -FilePath $executable
+          if (-not $bundles -or $bundles.Count -eq 0) {
+            Write-Host "❌ No bundles found to validate."
+            exit 1
+          }
 
-          if ($signature.Status -eq "Valid") {
-            Write-Host "✅ Executable is properly signed"
-            Write-Host "📜 Certificate Subject: $($signature.SignerCertificate.Subject)"
-            Write-Host "👤 Certificate Issuer: $($signature.SignerCertificate.Issuer)"
-            Write-Host "📅 Certificate Valid From: $($signature.SignerCertificate.NotBefore)"
-            Write-Host "📅 Certificate Valid To: $($signature.SignerCertificate.NotAfter)"
-            Write-Host "🔑 Certificate Thumbprint: $($signature.SignerCertificate.Thumbprint)"
-
-            # Check if it's our test certificate
-            if ($signature.SignerCertificate.Subject -like "*TestPublisher*") {
-              Write-Host "✅ Confirmed: Custom test certificate was used successfully!"
-            } else {
-              Write-Host "❌  Warning: Certificate subject doesn't match expected test certificate"
-              exit 1
+          $allValid = $true
+          foreach ($bundle in $bundles) {
+            Write-Host "🔍 Validating certificate for bundle: $bundle"
+            if (-not (Test-Path $bundle)) {
+              Write-Host "❌ Bundle not found: $bundle"
+              $allValid = $false
+              continue
             }
-          } elseif ($signature.Status -eq "NotSigned") {
-            Write-Host "❌ Executable is not signed"
+            $signature = Get-AuthenticodeSignature -FilePath $bundle
+            if ($signature.Status -eq "Valid") {
+              Write-Host "✅ Bundle is properly signed"
+              Write-Host "📜 Certificate Subject: $($signature.SignerCertificate.Subject)"
+              Write-Host "👤 Certificate Issuer: $($signature.SignerCertificate.Issuer)"
+              Write-Host "📅 Certificate Valid From: $($signature.SignerCertificate.NotBefore)"
+              Write-Host "📅 Certificate Valid To: $($signature.SignerCertificate.NotAfter)"
+              Write-Host "🔑 Certificate Thumbprint: $($signature.SignerCertificate.Thumbprint)"
+              if ($signature.SignerCertificate.Subject -like "*TestPublisher*") {
+                Write-Host "✅ Confirmed: Custom test certificate was used successfully!"
+              } else {
+                Write-Host "❌  Warning: Certificate subject doesn't match expected test certificate"
+                $allValid = $false
+              }
+            } elseif ($signature.Status -eq "NotSigned") {
+              Write-Host "❌ Bundle is not signed"
+              $allValid = $false
+            } else {
+              Write-Host "❌ Bundle signature status: $($signature.Status)"
+              Write-Host "📝 Signature details: $($signature.StatusMessage)"
+              $allValid = $false
+            }
+          }
+          if (-not $allValid) {
+            Write-Host "❌ One or more bundles failed certificate validation."
             exit 1
           } else {
-            Write-Host "❌ Executable signature status: $($signature.Status)"
-            Write-Host "📝 Signature details: $($signature.StatusMessage)"
-            exit 1
+            Write-Host "✅ All bundles passed certificate validation."
           }
       - uses: actions/upload-artifact@v4
         if: always() || cancelled()

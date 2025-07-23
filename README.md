@@ -16,7 +16,7 @@ steps:
   # required for unity-uwp-builder action
   - uses: microsoft/setup-msbuild@v2
 
-  - uses: buildalon/unity-uwp-builder@v1
+  - uses: buildalon/unity-uwp-builder@v2
     id: uwp-build
     with:
       project-path: '/path/to/your/build/output/directory'
@@ -26,7 +26,7 @@ steps:
   - name: print outputs
     shell: bash
     run: |
-      echo "Executable: ${{ steps.uwp-build.outputs.executable }}"
+      echo "Bundles: ${{ steps.uwp-build.outputs.bundles }}"
       echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
       ls -R "${{ steps.uwp-build.outputs.output-directory }}"
 ```
@@ -46,5 +46,5 @@ steps:
 
 ### outputs
 
-- `executable`: The path to the generated appx executable.
+- `bundles`: The paths to the generated appx bundles in json array.
 - `output-directory`: The path to the package output directory.

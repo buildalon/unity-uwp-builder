@@ -32,8 +32,8 @@ inputs:
     description: Additional arguments to pass to the msbuild command.
     required: false
 outputs:
-  executable:
-    description: The path to the generated executable.
+  bundles:
+    description: The paths to the generated bundles in json array.
   output-directory:
     description: The path to the output-directory.
 runs:

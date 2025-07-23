@@ -30164,32 +30164,26 @@ const main = async () => {
         const outputDirectory = path.join(projectPath, `AppPackages`);
         core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
-        let executables = [];
-        let executable;
+        const bundles = [];
         const uploadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxupload,msixupload}'));
-        executables = await uploadGlobber.glob();
-        if (executables.length > 0) {
+        const uploadGlobs = await uploadGlobber.glob();
+        if (uploadGlobs.length > 0) {
             core.info(`Found upload executables in package directory:`);
-            executables.forEach(executable => core.info(`  - "${executable}"`));
-            executable = executables[0];
+            uploadGlobs.forEach(executable => core.info(`  - "${executable}"`));
+            bundles.push(...uploadGlobs);
         }
-        if (!executable) {
-            const sideloadGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxbundle,msixbundle,appx,msix}'));
-            executables = await sideloadGlobber.glob();
-            if (executables.length > 0) {
-                core.info(`Found sideload executables in package directory:`);
-                executables.forEach(executable => core.info(`  - "${executable}"`));
-                executable = executables[0];
-            }
+        const bundleGlobber = await glob.create(path.join(outputDirectory, '**/*.{appxbundle,msixbundle,appx,msix}'));
+        const bundleGlobs = await bundleGlobber.glob();
+        if (bundleGlobs.length > 0) {
+            core.info(`Found sideload executables in package directory:`);
+            bundleGlobs.forEach(executable => core.info(`  - "${executable}"`));
+            bundles.push(...bundleGlobs);
         }
-        if (!executable) {
-            const allFilesGlobber = await glob.create(path.join(outputDirectory, '**/*'));
-            const allFiles = await allFilesGlobber.glob();
-            core.info(`No matching executable found for package type "${packageType}" in package directory.`);
-            allFiles.forEach(file => core.info(`  - "${file}"`));
+        if (bundles.length === 0) {
+            throw new Error(`No bundle files found in output directory: "${outputDirectory}"!`);
         }
-        core.info(`Found executable: "${executable}"`);
-        core.setOutput(`executable`, executable);
+        core.info(`Found bundles: "${bundles.join('", "')}"`);
+        core.setOutput(`bundles`, JSON.stringify(bundles));
     }
     catch (error) {
         core.setFailed(error);
