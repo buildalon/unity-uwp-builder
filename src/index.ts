@@ -127,7 +127,7 @@ const main = async () => {
         } finally {
             core.endGroup();
         }
-        const outputDirectory = path.join(projectPath, `AppPackages`);
+        const outputDirectory = path.join(projectPath, projectName, `AppPackages`);
         core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
         const bundles: string[] = [];
