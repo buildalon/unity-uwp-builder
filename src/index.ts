@@ -3,7 +3,6 @@ import glob = require('@actions/glob');
 import path = require('path');
 import fs = require('fs');
 import { exec } from '@actions/exec';
-import semver = require('semver');
 
 const main = async () => {
     try {
@@ -107,9 +106,13 @@ const main = async () => {
             }
             buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
         }
-        if (windowsSDKVersion && semver.gte(windowsSDKVersion, `10.0.26100.0`)) {
-            const vcxprojPath = path.join(projectPath,);
-            await removeWindowsMobileSDKReference(vcxprojPath);
+        if (windowsSDKVersion) {
+            // Use regex to extract the revision part and compare to 26100
+            const match = windowsSDKVersion.match(/^10\.0\.(\d+)\.\d+$/);
+            if (match && parseInt(match[1], 10) >= 26100) {
+                const vcxprojPath = path.join(projectPath);
+                await removeWindowsMobileSDKReference(vcxprojPath);
+            }
         }
         if (!core.isDebug()) {
             buildArgs.push(`/verbosity:minimal`);
