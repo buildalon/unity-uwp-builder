@@ -1,8 +1,9 @@
 import core = require('@actions/core');
-import exec = require('@actions/exec');
 import glob = require('@actions/glob');
 import path = require('path');
 import fs = require('fs');
+import { exec } from '@actions/exec';
+import semver = require('semver');
 
 const main = async () => {
     try {
@@ -12,33 +13,32 @@ const main = async () => {
         if (!projectPath.endsWith(`.sln`)) {
             projectPath = path.join(projectPath, `**/*.sln`);
         }
-        let buildPath = projectPath;
+        let solution = projectPath;
         if (projectPath.includes('*')) {
             const globber = await glob.create(projectPath, { matchDirectories: false });
             const files = await globber.glob();
             core.debug(`Found solution files:`);
             files.forEach(file => core.debug(`  - "${file}"`));
             if (files.length === 0) { throw new Error(`No solution file found.`); }
-            buildPath = files[0];
+            solution = files[0];
         }
-        core.info(`Building ${buildPath}...`);
-        projectPath = path.dirname(buildPath);
+        core.info(`Building ${solution}...`);
+        projectPath = path.dirname(solution);
         try {
-            await fs.promises.access(buildPath, fs.constants.R_OK);
+            await fs.promises.access(solution, fs.constants.R_OK);
         } catch (error) {
-            throw new Error(`Solution file not found: "${buildPath}"`);
+            throw new Error(`Solution file not found: "${solution}"`);
         }
         const appPackagesPath = path.join(projectPath, `AppPackages`);
         if (fs.existsSync(appPackagesPath)) {
             core.info(`Cleaning AppPackages directory: ${appPackagesPath}...`);
             await fs.promises.rm(appPackagesPath, { recursive: true, force: true });
         }
-        let projectName = path.basename(buildPath, `.sln`);
+        let projectName = path.basename(solution, `.sln`);
         core.debug(`projectName: "${projectName}"`);
         const configuration = core.getInput(`configuration`, { required: true });
         const buildArgs = [
             `/t:Build`,
-            `/p:Configuration=${configuration}`
         ];
         const architecture = core.getInput(`architecture`);
         if (architecture) {
@@ -47,56 +47,46 @@ const main = async () => {
         }
         const packageType = core.getInput(`package-type`, { required: true });
         core.debug(`package-type: "${packageType}"`);
-        const packageFormat = (core.getInput(`package-format`) || 'appx').toLocaleLowerCase();
-        core.debug(`package-format: "${packageFormat}"`);
-        if (packageFormat !== 'appx' && packageFormat !== 'msix') {
-            throw new Error(`Invalid package format: "${packageFormat}". Must be either "appx" or "msix".`);
-        }
-        const useAppxFormat = packageFormat === 'appx';
-        core.info(`Requested package format: ${packageFormat}`);
         core.info(`Requested package type: ${packageType}`);
+        const certificatePath = await getCertificatePath(projectPath);
         switch (packageType) {
             case `upload`:
                 buildArgs.push(
-                    `/p:UapAppxPackageBuildMode=StoreUpload`,
-                    `/p:GenerateAppInstallerFile=false`,
-                    `/p:AppxPackageSigningEnabled=false`,
-                    `/p:BuildAppxUploadPackageForUap=true`,
+                    `/p:Configuration=Master`,
+                    `/p:Platform="${architecture || 'x64|ARM64'}"`,
                     `/p:AppxBundle=Always`,
-                    `/p:AppxBundlePlatforms="${architecture || 'x64'}"`
+                    `/p:AppxBundlePlatforms="${architecture || 'x64|ARM64'}"`,
+                    `/p:UapAppxPackageBuildMode=StoreUpload`,
+                    `/p:AppxPackageSigningEnabled=true`,
+                    `/p:PackageCertificateThumbprint=""`,
+                    `/p:PackageCertificateKeyFile="${certificatePath}"`,
+                    `/p:GenerateTestCertificate=false`
                 );
                 break;
             case `sideload`:
-                const certificatePath = await getCertificatePath(projectPath);
-                // https://learn.microsoft.com/en-us/windows/uwp/packaging/auto-build-package-uwp-apps
                 buildArgs.push(
+                    `/p:Configuration=${configuration}`,
+                    `/p:Platform="${architecture || 'x64|ARM64'}"`,
+                    `/p:AppxBundle=Always`,
+                    `/p:AppxBundlePlatforms="${architecture || 'x64|ARM64'}"`,
                     `/p:UapAppxPackageBuildMode=SideloadOnly`,
                     `/p:AppxPackageSigningEnabled=true`,
                     `/p:PackageCertificateThumbprint=""`,
                     `/p:PackageCertificateKeyFile="${certificatePath}"`,
-                    `/p:AppxBundle=Always`,
-                    `/p:AppxBundlePlatforms="${architecture || 'x64'}"`,
                     `/p:GenerateTestCertificate=false`
                 );
-                const certificatePassword = core.getInput(`certificate-password`);
-                if (certificatePassword) {
-                    buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
-                }
                 break;
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
-        if (useAppxFormat) {
-            core.info('use appx/appxbundle output');
-            buildArgs.push(`/p:UseAppxFormat=true`);
+        const certificatePassword = core.getInput(`certificate-password`);
+        if (certificatePassword) {
+            buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
         }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.debug(`additional-args: "${additionalArgs}"`);
             buildArgs.push(...additionalArgs.split(` `));
-        }
-        if (!core.isDebug()) {
-            buildArgs.push(`/verbosity:minimal`);
         }
         const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
         let windowsSDKVersion: string | null = null;
@@ -117,11 +107,18 @@ const main = async () => {
             }
             buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
         }
+        if (windowsSDKVersion && semver.gte(windowsSDKVersion, `10.0.26100.0`)) {
+            const vcxprojPath = path.join(projectPath,);
+            await removeWindowsMobileSDKReference(vcxprojPath);
+        }
+        if (!core.isDebug()) {
+            buildArgs.push(`/verbosity:minimal`);
+        }
         core.info(`Final MSBuild arguments:`);
         buildArgs.forEach(arg => core.info(`  ${arg}`));
         core.startGroup(`MSBuild`);
         try {
-            await exec.exec(`msbuild`, [`"${buildPath}"`, ...buildArgs], {
+            await exec(`msbuild`, [`"${solution}"`, ...buildArgs], {
                 windowsVerbatimArguments: true
             });
         } finally {
@@ -130,53 +127,24 @@ const main = async () => {
         const outputDirectory = path.join(projectPath, `AppPackages`);
         core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
-
-        // Find the directory containing Install.ps1
-        const installScriptGlobber = await glob.create(`${outputDirectory}/**/Install.ps1`);
-        const installScripts = await installScriptGlobber.glob();
-        if (installScripts.length === 0) {
-            throw new Error(`No Install.ps1 found in "${outputDirectory}". Cannot determine main package directory.`);
-        }
-        // Use the first Install.ps1 found
-        const mainPackageDir = path.dirname(installScripts[0]);
-        core.info(`Main package directory: ${mainPackageDir}`);
-
-        // Only look for executables in the main package directory (not subdirectories)
-        const exts = [".appxbundle", ".msixbundle", ".appxupload", ".msixupload", ".appx", ".msix"];
-        const dirEntries = await fs.promises.readdir(mainPackageDir);
-        const executables = dirEntries
-            .filter(file => exts.some(ext => file.toLowerCase().endsWith(ext)))
-            .map(file => path.join(mainPackageDir, file));
-
-        if (executables.length === 0) {
-            throw new Error(`No executable file found in main package directory: "${mainPackageDir}".`);
-        }
-        core.info(`Found executables in main package directory:`);
-        executables.forEach(executable => core.info(`  - "${executable}"`));
-
+        // Use globber to find *upload files first, then fall back to other extensions
+        let executables: string[] = [];
         let executable: string | undefined;
-        switch (packageType) {
-            case `upload`:
-                if (useAppxFormat) {
-                    executable = executables.find(file => file.endsWith(`.appxupload`));
-                }
-                // fallback to msixupload
-                if (!executable) {
-                    executable = executables.find(file => file.endsWith(`.msixupload`));
-                }
-                break;
-            case `sideload`:
-                if (useAppxFormat) {
-                    // Only accept .appxbundle or .appx for sideload/appx
-                    executable = executables.find(file => file.endsWith(`.appxbundle`)) ||
-                        executables.find(file => file.endsWith(`.appx`));
-                }
-                // fallback to msix/msixbundle
-                if (!executable) {
-                    executable = executables.find(file => file.endsWith(`.msixbundle`)) ||
-                        executables.find(file => file.endsWith(`.msix`));
-                }
-                break;
+        const uploadGlobber = await glob.create(path.join(outputDirectory, '*.{appxupload,msixupload}'));
+        executables = await uploadGlobber.glob();
+        if (executables.length > 0) {
+            core.info(`Found upload executables in main package directory:`);
+            executables.forEach(executable => core.info(`  - "${executable}"`));
+            executable = executables[0];
+        }
+        if (!executable) {
+            const sideloadGlobber = await glob.create(path.join(outputDirectory, '*.{appxbundle,msixbundle,appx,msix}'));
+            executables = await sideloadGlobber.glob();
+            if (executables.length > 0) {
+                core.info(`Found sideload executables in main package directory:`);
+                executables.forEach(executable => core.info(`  - "${executable}"`));
+                executable = executables[0];
+            }
         }
         if (!executable) {
             throw new Error(`No matching executable found for package type "${packageType}" in main package directory.`);
@@ -306,5 +274,23 @@ async function getAvailableWindowsSDKVersion(): Promise<string | null> {
         core.debug(`Error detecting Windows SDK version: ${error}`);
         core.warning('Could not automatically detect Windows SDK version. Build may fail if Unity references an unavailable SDK version.');
         return null;
+    }
+}
+
+/**
+ * Removes the WindowsMobile SDKReference from the vcxproj file if it exists
+ * This is necessary for Windows SDK versions >= 10.0.26100.0 since it is no longer supported
+ */
+async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<void> {
+    try {
+        const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
+        const updatedContent = vcxprojContent.replace(
+            /<SDKReference Include="WindowsMobile"[^>]*>[\s\S]*?<\/SDKReference>/g,
+            ''
+        );
+        await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
+        core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+    } catch (error) {
+        core.warning(`Failed to remove WindowsMobile SDKReference from ${vcxprojPath}: ${error}`);
     }
 }

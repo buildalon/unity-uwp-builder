@@ -20,7 +20,7 @@ steps:
     id: uwp-build
     with:
       project-path: '/path/to/your/build/output/directory'
-      architecture: 'ARM64'
+      architecture: 'x64|ARM64'
       package-type: 'upload'
 
   - name: print outputs
@@ -37,9 +37,8 @@ steps:
 | ---- | ----------- | -------- |
 | `project-path` | The directory that contains the exported visual studio project from Unity. | true |
 | `configuration` | The configuration to use when building the visual studio project. | Defaults to `Master`. |
-| `architecture` | The architecture to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. | Defaults to `ARM64`. |
+| `architecture` | The architecture to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. | Defaults to `x64\|ARM64`. |
 | `package-type` | The type of package to generate. Can be: `sideload` or `upload`. | Defaults to `sideload`. |
-| `package-format` | The package format to use. Can be: `appx` or `msix`. | Defaults to `appx`. APPX is recommended for Unity UWP projects. |
 | `certificate-path` | The path to the certificate to use when packaging the UWP project. | Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate. |
 | `certificate-password` | The password for the certificate. | Required when providing your own certificate. |
 | `windows-sdk-version` | The Windows SDK version to use for building. If not specified, the latest available SDK version will be automatically detected and used. | Optional. Format: `10.0.xxxxx.x` (e.g., `10.0.22621.0`) |
