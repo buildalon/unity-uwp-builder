@@ -30188,7 +30188,7 @@ const main = async () => {
         }
         core.info(`Found bundles:`);
         bundles.forEach(bundle => core.info(`  - "${bundle}"`));
-        core.setOutput(`bundles`, bundles);
+        core.setOutput(`bundles`, JSON.stringify(bundles));
     }
     catch (error) {
         core.setFailed(error);

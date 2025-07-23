@@ -113,7 +113,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          BUNDLES="${{ steps.uwp-build.outputs.bundles }}"
+          BUNDLES='${{ steps.uwp-build.outputs.bundles }}'
 
           if [ -z "${BUNDLES}" ]; then
             echo "❌ uwp-build.outputs.bundles is empty!"
