@@ -155,9 +155,8 @@ const main = async () => {
             // print all the files in the output directory
             const allFilesGlobber = await glob.create(path.join(outputDirectory, '**/*'));
             const allFiles = await allFilesGlobber.glob();
-            core.error(`No matching executable found. Available files in package directory:`);
+            core.info(`No matching executable found for package type "${packageType}" in package directory.`);
             allFiles.forEach(file => core.info(`  - "${file}"`));
-            throw new Error(`No matching executable found for package type "${packageType}" in package directory.`);
         }
         core.info(`Found executable: "${executable}"`);
         core.setOutput(`executable`, executable);
