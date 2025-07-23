@@ -127,7 +127,19 @@ const main = async () => {
         } finally {
             core.endGroup();
         }
-        const outputDirectory = path.join(projectPath, projectName, `AppPackages`);
+        // using the globber, find the AppPackages directory itself
+        const appPackagesGlobber = await glob.create(path.join(projectPath, `**`, `*`), { matchDirectories: true });
+        const appPackagesGlobs = await appPackagesGlobber.glob();
+        const outputDirectory = appPackagesGlobs.find(glob => glob.includes(`AppPackages`));
+        if (!outputDirectory) {
+            throw new Error(`AppPackages directory not found.`);
+        }
+        // make sure the output directory exists and is valid
+        try {
+            await fs.promises.access(outputDirectory, fs.constants.R_OK);
+        } catch (error) {
+            throw new Error(`Output directory not found: "${outputDirectory}".`);
+        }
         core.info(`outputDirectory: ${outputDirectory}`);
         core.setOutput(`output-directory`, outputDirectory);
         const bundles: string[] = [];
@@ -148,7 +160,8 @@ const main = async () => {
         if (bundles.length === 0) {
             throw new Error(`No bundle files found in output directory: "${outputDirectory}"!`);
         }
-        core.info(`Found bundles: "${bundles.join('", "')}"`);
+        core.info(`Found bundles:`);
+        bundles.forEach(bundle => core.info(`  - "${bundle}"`));
         core.setOutput(`bundles`, JSON.stringify(bundles));
     } catch (error) {
         core.setFailed(error);
