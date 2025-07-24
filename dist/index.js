@@ -30324,7 +30324,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
             const displayName = displayNameMatch ? displayNameMatch[1] : name;
             let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
             appxManifestContent = appxManifestContent.replace(/<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/, (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`);
-            appxManifestContent = appxManifestContent.replace(/<DisplayName>[^<]+<\/DisplayName>/, `<DisplayName>${displayName}<\/DisplayName>`);
+            appxManifestContent = appxManifestContent.replace(/(<Properties[\s\S]*?<DisplayName>)([^<]*)(<\/DisplayName>[\s\S]*?<\/Properties>)/, (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`);
             await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
             core.info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
             core.info(`Updated Package.appxmanifest DisplayName to: ${displayName}`);
