@@ -432,7 +432,7 @@ async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<voi
         core.info(vcxprojContent);
         core.endGroup();
         const updatedContent = vcxprojContent.replace(
-            /<SDKReference\s+Include=["']WindowsMobile["'][^>]*>[\s\S]*?<\/SDKReference>\s*/gi,
+            /<SDKReference\s+Include=["']WindowsMobile[^"']*["'][^>]*\/>|<SDKReference\s+Include=["']WindowsMobile[^"']*["'][^>]*>[\s\S]*?<\/SDKReference>/gi,
             ''
         );
         if (vcxprojContent !== updatedContent) {

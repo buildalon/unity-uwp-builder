@@ -30430,7 +30430,7 @@ async function removeWindowsMobileSDKReference(vcxprojPath) {
         core.startGroup(`--- ${vcxprojPath} file contents ---`);
         core.info(vcxprojContent);
         core.endGroup();
-        const updatedContent = vcxprojContent.replace(/<SDKReference\s+Include=["']WindowsMobile["'][^>]*>[\s\S]*?<\/SDKReference>\s*/gi, '');
+        const updatedContent = vcxprojContent.replace(/<SDKReference\s+Include=["']WindowsMobile[^"']*["'][^>]*\/>|<SDKReference\s+Include=["']WindowsMobile[^"']*["'][^>]*>[\s\S]*?<\/SDKReference>/gi, '');
         if (vcxprojContent !== updatedContent) {
             await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
             core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
