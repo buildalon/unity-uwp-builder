@@ -421,16 +421,23 @@ async function getAvailableWindowsSDKVersion(): Promise<string | null> {
  * This is necessary for Windows SDK versions >= 10.0.26100.0 since it is no longer supported
  */
 async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<void> {
-    core.info(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
+    core.startGroup(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
     try {
         const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
         const updatedContent = vcxprojContent.replace(
-            /<SDKReference Include="WindowsMobile"[^>]*>[\s\S]*?<\/SDKReference>/g,
+            /<SDKReference\s+Include=["']WindowsMobile["'][^>]*>[\s\S]*?<\/SDKReference>\s*/gi,
             ''
         );
-        await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
-        core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        if (vcxprojContent !== updatedContent) {
+            await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
+            core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        } else {
+            core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
+        }
     } catch (error) {
-        core.warning(`Failed to remove WindowsMobile SDKReference from ${vcxprojPath}: ${error}`);
+        throw new Error(`Failed to remove WindowsMobile SDKReference: ${error.message}`);
+    }
+    finally {
+        core.endGroup();
     }
 }

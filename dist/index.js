@@ -30421,15 +30421,23 @@ async function getAvailableWindowsSDKVersion() {
     }
 }
 async function removeWindowsMobileSDKReference(vcxprojPath) {
-    core.info(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
+    core.startGroup(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
     try {
         const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-        const updatedContent = vcxprojContent.replace(/<SDKReference Include="WindowsMobile"[^>]*>[\s\S]*?<\/SDKReference>/g, '');
-        await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
-        core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        const updatedContent = vcxprojContent.replace(/<SDKReference\s+Include=["']WindowsMobile["'][^>]*>[\s\S]*?<\/SDKReference>\s*/gi, '');
+        if (vcxprojContent !== updatedContent) {
+            await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
+            core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        }
+        else {
+            core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
+        }
     }
     catch (error) {
-        core.warning(`Failed to remove WindowsMobile SDKReference from ${vcxprojPath}: ${error}`);
+        throw new Error(`Failed to remove WindowsMobile SDKReference: ${error.message}`);
+    }
+    finally {
+        core.endGroup();
     }
 }
 
