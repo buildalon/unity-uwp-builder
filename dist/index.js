@@ -30085,15 +30085,15 @@ const main = async () => {
             core.info(`Cleaning AppPackages directory: ${appPackagesPath}...`);
             await fs.promises.rm(appPackagesPath, { recursive: true, force: true });
         }
-        let projectName = path.basename(solution, `.sln`);
-        core.debug(`projectName: "${projectName}"`);
-        const vcxprojPath = path.join(projectPath, `${projectName}.vcxproj`);
-        try {
-            await fs.promises.access(vcxprojPath, fs.constants.R_OK);
+        const vcxprojGlobber = await glob.create(path.join(projectPath, '**/*.vcxproj'), { matchDirectories: false });
+        const vcxprojFiles = await vcxprojGlobber.glob();
+        if (vcxprojFiles.length === 0) {
+            throw new Error(`No VCXProj file found in: "${projectPath}"`);
         }
-        catch (error) {
-            throw new Error(`VCXProj file not found: "${vcxprojPath}"`);
-        }
+        core.info(`Found VCXProj files:`);
+        vcxprojFiles.forEach(file => core.info(`  - "${file}"`));
+        const vcxprojPath = vcxprojFiles[0];
+        core.info(`Using VCXProj: ${vcxprojPath}`);
         const configuration = core.getInput(`configuration`, { required: true });
         const buildArgs = [
             `/t:Build`,
