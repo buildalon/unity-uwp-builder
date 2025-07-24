@@ -428,7 +428,7 @@ async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<voi
     core.startGroup(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
     try {
         const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-        core.startGroup('--- VCXProj file contents ---');
+        core.startGroup(`--- ${vcxprojPath} file contents ---`);
         core.info(vcxprojContent);
         core.endGroup();
         const updatedContent = vcxprojContent.replace(
