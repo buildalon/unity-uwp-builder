@@ -30096,8 +30096,7 @@ const main = async () => {
         core.endGroup();
         let vcxprojPath = null;
         for (const file of vcxprojFiles) {
-            const content = await fs.promises.readFile(file, 'utf8');
-            if (!content.includes('Il2CppOutputProject')) {
+            if (!path.basename(file).includes('Il2CppOutputProject')) {
                 vcxprojPath = file;
                 break;
             }
@@ -30175,7 +30174,11 @@ const main = async () => {
         if (windowsSDKVersion) {
             const match = windowsSDKVersion.match(/^10\.0\.(\d+)\.\d+$/);
             if (match && parseInt(match[1], 10) >= 26100) {
-                await removeWindowsMobileSDKReference(vcxprojPath);
+                core.startGroup('Removing WindowsMobile SDKReference from all VCXProj files...');
+                for (const file of vcxprojFiles) {
+                    await removeWindowsMobileSDKReference(file);
+                }
+                core.endGroup();
             }
         }
         if (!core.isDebug()) {
