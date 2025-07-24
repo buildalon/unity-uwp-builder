@@ -395,6 +395,7 @@ async function getAvailableWindowsSDKVersion(): Promise<string | null> {
  * This is necessary for Windows SDK versions >= 10.0.26100.0 since it is no longer supported
  */
 async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<void> {
+    core.info(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
     try {
         const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
         const updatedContent = vcxprojContent.replace(

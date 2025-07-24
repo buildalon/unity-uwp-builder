@@ -30395,6 +30395,7 @@ async function getAvailableWindowsSDKVersion() {
     }
 }
 async function removeWindowsMobileSDKReference(vcxprojPath) {
+    core.info(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
     try {
         const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
         const updatedContent = vcxprojContent.replace(/<SDKReference Include="WindowsMobile"[^>]*>[\s\S]*?<\/SDKReference>/g, '');
