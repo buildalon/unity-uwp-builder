@@ -30356,7 +30356,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
     }
     try {
         const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
-        const archRegex = /<Architecture>([^<]+)<\/Architecture>/g;
+        const archRegex = /<PackageArchitecture>([^<]+)<\/PackageArchitecture>/gi;
         const architectures = [];
         let archMatch;
         while ((archMatch = archRegex.exec(storeAssociationContent)) !== null) {
@@ -30366,8 +30366,12 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
             const archMap = {
                 'x86': 'x86',
                 'x64': 'x64',
-                'ARM': 'ARM',
-                'ARM64': 'ARM64',
+                'arm': 'ARM',
+                'arm64': 'ARM64',
+                'X86': 'x86',
+                'X64': 'x64',
+                'Arm': 'ARM',
+                'Arm64': 'ARM64',
             };
             const msbuildArchs = architectures.map(a => archMap[a] || a).filter((v, i, arr) => arr.indexOf(v) === i);
             const appxBundlePlatformsValue = msbuildArchs.join('|');
@@ -30388,7 +30392,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
             core.info(`Set AppxBundlePlatforms in ${vcxprojPath} to: ${appxBundlePlatformsValue}`);
         }
         else {
-            core.warning('No <Architecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
+            core.warning('No <PackageArchitecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
         }
     }
     catch (error) {

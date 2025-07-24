@@ -337,11 +337,11 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         core.warning(`Failed to update StoreAssociationFile with version: ${error}`);
     }
 
-    // Step 3: Set AppxBundlePlatforms in vcxproj based on Package.StoreAssociation.xml architectures
+    // Step 3: Set AppxBundlePlatforms in vcxproj based on Package.StoreAssociation.xml <PackageArchitecture> tags
     try {
         const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
-        // Find all <Architecture> tags
-        const archRegex = /<Architecture>([^<]+)<\/Architecture>/g;
+        // Find all <PackageArchitecture> tags
+        const archRegex = /<PackageArchitecture>([^<]+)<\/PackageArchitecture>/gi;
         const architectures: string[] = [];
         let archMatch: RegExpExecArray | null;
         while ((archMatch = archRegex.exec(storeAssociationContent)) !== null) {
@@ -352,8 +352,12 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
             const archMap: Record<string, string> = {
                 'x86': 'x86',
                 'x64': 'x64',
-                'ARM': 'ARM',
-                'ARM64': 'ARM64',
+                'arm': 'ARM',
+                'arm64': 'ARM64',
+                'X86': 'x86',
+                'X64': 'x64',
+                'Arm': 'ARM',
+                'Arm64': 'ARM64',
             };
             const msbuildArchs = architectures.map(a => archMap[a] || a).filter((v, i, arr) => arr.indexOf(v) === i);
             const appxBundlePlatformsValue = msbuildArchs.join('|');
@@ -374,7 +378,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
             await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
             core.info(`Set AppxBundlePlatforms in ${vcxprojPath} to: ${appxBundlePlatformsValue}`);
         } else {
-            core.warning('No <Architecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
+            core.warning('No <PackageArchitecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
         }
     } catch (error) {
         core.warning(`Failed to set AppxBundlePlatforms in vcxproj: ${error}`);
