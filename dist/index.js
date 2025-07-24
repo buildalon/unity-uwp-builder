@@ -30057,7 +30057,7 @@ const main = async () => {
             throw new Error(`This action can only be performed on a Windows runner.`);
         }
         let projectPath = core.getInput(`project-path`, { required: true });
-        core.debug(`project-path: "${projectPath}"`);
+        core.info(`project-path: "${projectPath}"`);
         if (!projectPath.endsWith(`.sln`)) {
             projectPath = path.join(projectPath, `**/*.sln`);
         }
@@ -30065,8 +30065,9 @@ const main = async () => {
         if (projectPath.includes('*')) {
             const globber = await glob.create(projectPath, { matchDirectories: false });
             const files = await globber.glob();
-            core.debug(`Found solution files:`);
-            files.forEach(file => core.debug(`  - "${file}"`));
+            core.startGroup(`Found solution files:`);
+            files.forEach(file => core.info(`  - "${file}"`));
+            core.endGroup();
             if (files.length === 0) {
                 throw new Error(`No solution file found.`);
             }
@@ -30090,11 +30091,28 @@ const main = async () => {
         if (vcxprojFiles.length === 0) {
             throw new Error(`No VCXProj file found in: "${projectPath}"`);
         }
-        core.info(`Found VCXProj files:`);
+        core.startGroup(`Found VCXProj files:`);
         vcxprojFiles.forEach(file => core.info(`  - "${file}"`));
-        const vcxprojPath = vcxprojFiles[0];
+        core.endGroup();
+        let vcxprojPath = null;
+        for (const file of vcxprojFiles) {
+            const content = await fs.promises.readFile(file, 'utf8');
+            if (!content.includes('Il2CppOutputProject')) {
+                vcxprojPath = file;
+                break;
+            }
+        }
+        if (!vcxprojPath) {
+            throw new Error(`No suitable VCXProj file found that does not contain 'Il2CppOutputProject'.`);
+        }
         core.info(`Using VCXProj: ${vcxprojPath}`);
+        await fs.promises.access(vcxprojPath, fs.constants.R_OK);
+        const stat = await fs.promises.stat(vcxprojPath);
+        if (!stat.isFile()) {
+            throw new Error(`VCXProj file not found or is not a valid file: "${vcxprojPath}"`);
+        }
         const configuration = core.getInput(`configuration`, { required: true });
+        core.info(`configuration: "${configuration}"`);
         const buildArgs = [
             `/t:Build`,
             `/p:AppxBundle=Always`,
@@ -30102,12 +30120,11 @@ const main = async () => {
         ];
         const platform = core.getInput(`platform`);
         if (platform) {
-            core.debug(`platform: "${platform}"`);
+            core.info(`platform: "${platform}"`);
             buildArgs.push(`/p:Platform=${platform}`);
         }
         const packageType = core.getInput(`package-type`, { required: true });
-        core.debug(`package-type: "${packageType}"`);
-        core.info(`Requested package type: ${packageType}`);
+        core.info(`package-type: "${packageType}"`);
         const certificatePath = await getCertificatePath(projectPath);
         switch (packageType) {
             case `upload`:
@@ -30126,11 +30143,12 @@ const main = async () => {
         }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
-            core.debug(`additional-args: "${additionalArgs}"`);
+            core.info(`additional-args: "${additionalArgs}"`);
             buildArgs.push(...additionalArgs);
         }
         const storeAssociationPath = core.getInput('store-association-path');
         if (storeAssociationPath) {
+            core.info(`store-association-path: "${storeAssociationPath}"`);
             await copyAndEnsureStoreAssociation(vcxprojPath, storeAssociationPath);
         }
         const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
@@ -30163,8 +30181,9 @@ const main = async () => {
         if (!core.isDebug()) {
             buildArgs.push(`/verbosity:minimal`);
         }
-        core.info(`Final MSBuild arguments:`);
+        core.startGroup(`Final MSBuild arguments:`);
         buildArgs.forEach(arg => core.info(`  ${arg}`));
+        core.endGroup();
         core.startGroup(`MSBuild`);
         try {
             await (0, exec_1.exec)(`msbuild`, [`"${solution}"`, ...buildArgs], {
@@ -30190,15 +30209,17 @@ const main = async () => {
         core.setOutput(`output-directory`, outputDirectory);
         const allGlobber = await glob.create(path.join(outputDirectory, '**/*'));
         const allFiles = await allGlobber.glob();
-        core.info(`All files found in output directory:`);
+        core.startGroup(`All files found in output directory:`);
         allFiles.forEach(file => core.info(`  - "${file}"`));
+        core.endGroup();
         const bundleExts = ['appxupload', 'msixupload', 'appxbundle', 'msixbundle', 'appx', 'msix'];
         const bundles = allFiles.filter(f => bundleExts.some(ext => f.toLowerCase().endsWith(`.${ext}`)));
         if (bundles.length === 0) {
             throw new Error(`No bundle files found in output directory: "${outputDirectory}"!`);
         }
-        core.info(`Found bundles:`);
+        core.startGroup(`Found bundles:`);
         bundles.forEach(bundle => core.info(`  - "${bundle}"`));
+        core.endGroup();
         core.setOutput(`bundles`, JSON.stringify(bundles));
     }
     catch (error) {
@@ -30211,15 +30232,15 @@ async function getCertificatePath(projectPath) {
     if (!certificatePath || certificatePath.trim() === ``) {
         certificatePath = `${projectPath}/**/*.pfx`;
     }
-    core.debug(`certificatePath: "${certificatePath}"`);
+    core.info(`certificatePath: "${certificatePath}"`);
     if (!certificatePath.endsWith(`.pfx`)) {
         certificatePath = path.join(certificatePath, `**/*.pfx`);
     }
     if (certificatePath.includes(`*`)) {
         const certificateGlobber = await glob.create(certificatePath);
         const certificateFiles = await certificateGlobber.glob();
-        core.debug(`Found certificate files:`);
-        certificateFiles.forEach(file => core.debug(`  - "${file}"`));
+        core.info(`Found certificate files:`);
+        certificateFiles.forEach(file => core.info(`  - "${file}"`));
         if (certificateFiles.length === 0) {
             throw new Error(`No certificate file found: "${certificatePath}". Make sure Unity generated a test certificate or provide a custom certificate path.`);
         }
@@ -30228,6 +30249,10 @@ async function getCertificatePath(projectPath) {
     }
     try {
         await fs.promises.access(certificatePath, fs.constants.R_OK);
+        const stat = await fs.promises.stat(certificatePath);
+        if (!stat.isFile()) {
+            throw new Error(`Certificate path is not a valid file: "${certificatePath}"`);
+        }
     }
     catch (error) {
         throw new Error(`Certificate file not found: "${certificatePath}". Make sure the certificate exists and is readable.`);
@@ -30247,8 +30272,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
         }
     }
     catch (error) {
-        core.warning(`Failed to copy StoreAssociationFile: ${error}`);
-        return;
+        throw new Error(`Failed to copy StoreAssociationFile: ${error}`);
     }
     let content;
     try {
@@ -30334,18 +30358,18 @@ async function isWindowsSDKVersionAvailable(version) {
             try {
                 const versionPath = path.join(basePath, version);
                 await fs.promises.access(versionPath, fs.constants.R_OK);
-                core.debug(`Found Windows SDK version ${version} at: ${versionPath}`);
+                core.info(`Found Windows SDK version ${version} at: ${versionPath}`);
                 return true;
             }
             catch (error) {
                 continue;
             }
         }
-        core.debug(`Windows SDK version ${version} not found in standard locations`);
+        core.info(`Windows SDK version ${version} not found in standard locations`);
         return false;
     }
     catch (error) {
-        core.debug(`Error checking Windows SDK version ${version}: ${error}`);
+        core.info(`Error checking Windows SDK version ${version}: ${error}`);
         return false;
     }
 }
@@ -30362,10 +30386,11 @@ async function getAvailableWindowsSDKVersion() {
                 const entries = await fs.promises.readdir(basePath);
                 const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
                 allVersions.push(...versions);
-                core.info(`Found Windows SDK versions in ${basePath}: ${versions.join(', ')}`);
+                core.info(`Found Windows SDK versions in ${basePath}:`);
+                versions.forEach(version => core.info(`  - ${version}`));
             }
             catch (error) {
-                core.debug(`Path not accessible: ${basePath}`);
+                core.info(`Path not accessible: ${basePath}`);
                 continue;
             }
         }
@@ -30385,11 +30410,12 @@ async function getAvailableWindowsSDKVersion() {
             }
             return 0;
         });
-        core.info(`All available Windows SDK versions: ${uniqueVersions.join(', ')}`);
+        core.info(`All available Windows SDK versions:`);
+        uniqueVersions.forEach(version => core.info(`  - ${version}`));
         return uniqueVersions[0];
     }
     catch (error) {
-        core.debug(`Error detecting Windows SDK version: ${error}`);
+        core.info(`Error detecting Windows SDK version: ${error}`);
         core.warning('Could not automatically detect Windows SDK version. Build may fail if Unity references an unavailable SDK version.');
         return null;
     }
