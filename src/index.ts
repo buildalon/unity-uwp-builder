@@ -288,9 +288,12 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         // Extract MainPackageIdentityName and Publisher from StoreAssociationFile
         const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
         const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
+        // Extract DisplayName from StoreAssociationFile if present
+        const displayNameMatch = /<DisplayName>([^<]+)<\/DisplayName>/.exec(storeAssociationContent);
         if (nameMatch && publisherMatch) {
             const name = nameMatch[1];
             const publisher = publisherMatch[1];
+            const displayName = displayNameMatch ? displayNameMatch[1] : name;
             // Read appxmanifest
             let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
             // Update Name and Publisher in <Identity> tag, but keep Version
@@ -298,8 +301,14 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
                 /<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/,
                 (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`
             );
+            // Update DisplayName in <Properties> if present
+            appxManifestContent = appxManifestContent.replace(
+                /<DisplayName>[^<]+<\/DisplayName>/,
+                `<DisplayName>${displayName}<\/DisplayName>`
+            );
             await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
             core.info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
+            core.info(`Updated Package.appxmanifest DisplayName to: ${displayName}`);
         } else {
             core.warning(`Could not find MainPackageIdentityName or Publisher in StoreAssociationFile.`);
         }
@@ -326,6 +335,49 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         }
     } catch (error) {
         core.warning(`Failed to update StoreAssociationFile with version: ${error}`);
+    }
+
+    // Step 3: Set AppxBundlePlatforms in vcxproj based on Package.StoreAssociation.xml architectures
+    try {
+        const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+        // Find all <Architecture> tags
+        const archRegex = /<Architecture>([^<]+)<\/Architecture>/g;
+        const architectures: string[] = [];
+        let archMatch: RegExpExecArray | null;
+        while ((archMatch = archRegex.exec(storeAssociationContent)) !== null) {
+            architectures.push(archMatch[1]);
+        }
+        if (architectures.length > 0) {
+            // Map StoreAssociation architectures to MSBuild platform names
+            const archMap: Record<string, string> = {
+                'x86': 'x86',
+                'x64': 'x64',
+                'ARM': 'ARM',
+                'ARM64': 'ARM64',
+            };
+            const msbuildArchs = architectures.map(a => archMap[a] || a).filter((v, i, arr) => arr.indexOf(v) === i);
+            const appxBundlePlatformsValue = msbuildArchs.join('|');
+            let vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
+            // Add or update <AppxBundlePlatforms> in a PropertyGroup
+            if (vcxprojContent.includes('<AppxBundlePlatforms>')) {
+                vcxprojContent = vcxprojContent.replace(/<AppxBundlePlatforms>[^<]+<\/AppxBundlePlatforms>/, `<AppxBundlePlatforms>${appxBundlePlatformsValue}<\/AppxBundlePlatforms>`);
+            } else {
+                // Insert into first PropertyGroup
+                const propertyGroupRegex = /(<PropertyGroup[^>]*>)/;
+                if (propertyGroupRegex.test(vcxprojContent)) {
+                    vcxprojContent = vcxprojContent.replace(propertyGroupRegex, `$1\n    <AppxBundlePlatforms>${appxBundlePlatformsValue}<\/AppxBundlePlatforms>`);
+                } else {
+                    // If no PropertyGroup, append at the top
+                    vcxprojContent = `<PropertyGroup>\n    <AppxBundlePlatforms>${appxBundlePlatformsValue}<\/AppxBundlePlatforms>\n<\/PropertyGroup>\n` + vcxprojContent;
+                }
+            }
+            await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
+            core.info(`Set AppxBundlePlatforms in ${vcxprojPath} to: ${appxBundlePlatformsValue}`);
+        } else {
+            core.warning('No <Architecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
+        }
+    } catch (error) {
+        core.warning(`Failed to set AppxBundlePlatforms in vcxproj: ${error}`);
     }
 }
 
