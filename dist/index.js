@@ -30317,7 +30317,11 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
         const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
         const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
         const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
-        const reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(storeAssociationContent);
+        let reservedNameMatch = null;
+        const reservedNamesBlock = /<ReservedNames>([\s\S]*?)<\/ReservedNames>/.exec(storeAssociationContent);
+        if (reservedNamesBlock) {
+            reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(reservedNamesBlock[1]);
+        }
         const displayNameMatch = /<DisplayName>([^<]+)<\/DisplayName>/.exec(storeAssociationContent);
         if (nameMatch && publisherMatch) {
             const name = nameMatch[1];
@@ -30325,7 +30329,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
             const displayName = reservedNameMatch ? reservedNameMatch[1] : (displayNameMatch ? displayNameMatch[1] : name);
             let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
             appxManifestContent = appxManifestContent.replace(/<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/, (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`);
-            appxManifestContent = appxManifestContent.replace(/(<Properties[\s\S]*?<DisplayName>)([^<]*)(<\/DisplayName>[\s\S]*?<\/Properties>)/, (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`);
+            appxManifestContent = appxManifestContent.replace(/(<Properties[\s\S]*?<DisplayName>)([\s\S]*?)(<\/DisplayName>)/, (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`);
             await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
             core.info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
             core.info(`Updated Package.appxmanifest DisplayName to: ${displayName}`);

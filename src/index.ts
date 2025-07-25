@@ -288,8 +288,13 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         // Extract MainPackageIdentityName and Publisher from StoreAssociationFile
         const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
         const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
-        // Extract ReservedName and DisplayName from StoreAssociationFile if present
-        const reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(storeAssociationContent);
+        // Extract first ReservedName from <ReservedNames> (even if nested)
+        let reservedNameMatch: RegExpExecArray | null = null;
+        const reservedNamesBlock = /<ReservedNames>([\s\S]*?)<\/ReservedNames>/.exec(storeAssociationContent);
+        if (reservedNamesBlock) {
+            reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(reservedNamesBlock[1]);
+        }
+        // Fallback to DisplayName if present at root
         const displayNameMatch = /<DisplayName>([^<]+)<\/DisplayName>/.exec(storeAssociationContent);
         if (nameMatch && publisherMatch) {
             const name = nameMatch[1];
@@ -305,8 +310,9 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
             );
             // Update only the <DisplayName> inside <Properties> to match exactly (including whitespace and punctuation)
             // This ensures the DisplayName matches the StoreAssociationFile ReservedName value, fixing APPX1607
+            // Make regex more robust to whitespace/newlines
             appxManifestContent = appxManifestContent.replace(
-                /(<Properties[\s\S]*?<DisplayName>)([^<]*)(<\/DisplayName>[\s\S]*?<\/Properties>)/,
+                /(<Properties[\s\S]*?<DisplayName>)([\s\S]*?)(<\/DisplayName>)/,
                 (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`
             );
             await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
