@@ -230,59 +230,38 @@ async function getCertificatePath(projectPath: string): Promise<string> {
  */
 async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: string): Promise<void> {
     const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
-    try {
-        // Copy file if not already present or if source is different
-        if (!fs.existsSync(packageStoreAssociationFilePath) || (await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8')) !== (await fs.promises.readFile(sourcePath, 'utf8'))) {
-            await fs.promises.copyFile(sourcePath, packageStoreAssociationFilePath);
-            core.info(`Copied StoreAssociationFile to ${packageStoreAssociationFilePath}`);
-        } else {
-            core.info(`StoreAssociationFile already exists and is up to date.`);
-        }
-    } catch (error) {
-        throw new Error(`Failed to copy StoreAssociationFile: ${error}`);
-    }
-
-    let content: string;
-    try {
-        content = await fs.promises.readFile(vcxprojPath, 'utf8');
-    } catch (error) {
-        core.warning(`Failed to read vcxproj file: ${error}`);
-        return;
-    }
-    // Check if Package.StoreAssociation.xml is already referenced
-    if (content.includes('Package.StoreAssociation.xml')) {
-        core.info('Package.StoreAssociation.xml already referenced in vcxproj.');
-        return;
-    }
-    core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
-    // check the vcxproj if it contains a ItemGroup with the StoreAssociationFile
-    const itemGroupRegex = /<ItemGroup>([\s\S]*?)<\/ItemGroup>/g;
-    let itemGroupMatch: RegExpExecArray | null = null;
+    // Ensure the StoreAssociationFile file is readable and writable
+    await fs.promises.access(packageStoreAssociationFilePath, fs.constants.R_OK | fs.constants.W_OK);
+    // Always copy the StoreAssociationFile, regardless of existence or content
+    await fs.promises.copyFile(sourcePath, packageStoreAssociationFilePath);
+    let vcxprojFileContent: string = await fs.promises.readFile(vcxprojPath, 'utf8');
     let hasStoreAssociationFile: boolean = false;
-    while ((itemGroupMatch = itemGroupRegex.exec(content)) !== null) {
-        if (itemGroupMatch[1].includes('StoreAssociationFile')) {
-            hasStoreAssociationFile = true;
-            break;
+    // Check if Package.StoreAssociation.xml is already referenced
+    if (!vcxprojFileContent.includes('Package.StoreAssociation.xml')) {
+        // check the vcxproj if it contains a ItemGroup with the StoreAssociationFile
+        const itemGroupRegex = /<ItemGroup>([\s\S]*?)<\/ItemGroup>/g;
+        let itemGroupMatch: RegExpExecArray | null = null;
+        while ((itemGroupMatch = itemGroupRegex.exec(vcxprojFileContent)) !== null) {
+            if (itemGroupMatch[1].includes('StoreAssociationFile')) {
+                hasStoreAssociationFile = true;
+                break;
+            }
         }
     }
     // If no ItemGroup with StoreAssociationFile, add it at before the </Project> tag
     if (!hasStoreAssociationFile) {
+        core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
         const itemGroup = `  <ItemGroup>
     <None Include="Package.StoreAssociation.xml" />
   </ItemGroup>`;
         // Insert before the closing </Project> tag
-        content = content.replace('</Project>', `${itemGroup}</Project>`);
-    }
-
-    // Write the updated content back to the vcxproj file
-    try {
-        await fs.promises.writeFile(vcxprojPath, content, 'utf8');
+        vcxprojFileContent = vcxprojFileContent.replace('</Project>', `${itemGroup}</Project>`);
+        // Write the updated content back to the vcxproj file
+        await fs.promises.writeFile(vcxprojPath, vcxprojFileContent, 'utf8');
         core.info(`Updated ${vcxprojPath} to include StoreAssociationFile reference.`);
-    } catch (error) {
-        core.warning(`Failed to update ${vcxprojPath}: ${error}`);
     }
-    // Step 1: Extract Identity info from StoreAssociationFile and update appxmanifest (without changing version)
     const appxManifestPath = path.join(path.dirname(vcxprojPath), 'Package.appxmanifest');
+    // Step 1: Extract Identity info from StoreAssociationFile and update appxmanifest (without changing version)
     try {
         const storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
         // Extract MainPackageIdentityName and Publisher from StoreAssociationFile
@@ -322,7 +301,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
             core.warning(`Could not find MainPackageIdentityName or Publisher in StoreAssociationFile.`);
         }
     } catch (error) {
-        core.warning(`Failed to update Package.appxmanifest Identity: ${error}`);
+        throw new Error(`Failed to copy StoreAssociationFile:\n${error}`);
     }
 
     // Step 2: Extract Version from appxmanifest and update StoreAssociationFile
@@ -333,17 +312,15 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         if (match) {
             const version = match[3];
             let storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
-            storeAssociationContent = storeAssociationContent.replace(
-                /<PackageMaxArchitectureVersion>[^<]+<\/PackageMaxArchitectureVersion>/,
-                `<PackageMaxArchitectureVersion>${version}</PackageMaxArchitectureVersion>`
-            );
+            // Replace all occurrences of <PackageMaxArchitectureVersion>...</PackageMaxArchitectureVersion>
+            storeAssociationContent = storeAssociationContent.replace(/<PackageMaxArchitectureVersion>[^<]+<\/PackageMaxArchitectureVersion>/g, `<PackageMaxArchitectureVersion>${version}<\/PackageMaxArchitectureVersion>`);
             await fs.promises.writeFile(packageStoreAssociationFilePath, storeAssociationContent, 'utf8');
-            core.info(`Updated ${packageStoreAssociationFilePath} with Version from Package.appxmanifest.`);
+            core.info(`Updated all PackageMaxArchitectureVersion tags in ${packageStoreAssociationFilePath} with Version from Package.appxmanifest.`);
         } else {
             core.warning(`No Identity found in Package.appxmanifest.`);
         }
     } catch (error) {
-        core.warning(`Failed to update StoreAssociationFile with version: ${error}`);
+        throw new Error(`Failed to update StoreAssociationFile with Version from Package.appxmanifest:\n${error}`);
     }
 
     // Step 3: Set AppxBundlePlatforms in vcxproj based on Package.StoreAssociation.xml <PackageArchitecture> tags
@@ -389,25 +366,25 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         } else {
             core.warning('No <PackageArchitecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
         }
-
-        // step 4: print the contents of each modified file
-        core.startGroup(`--- ${vcxprojPath} file contents ---`);
-        const updatedVcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-        core.info(updatedVcxprojContent);
-        core.endGroup();
-
-        core.startGroup(`--- ${packageStoreAssociationFilePath} file contents ---`);
-        const updatedStoreAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
-        core.info(updatedStoreAssociationContent);
-        core.endGroup();
-
-        core.startGroup(`--- ${appxManifestPath} file contents ---`);
-        const updatedAppxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
-        core.info(updatedAppxManifestContent);
-        core.endGroup();
     } catch (error) {
-        core.warning(`Failed to set AppxBundlePlatforms in vcxproj: ${error}`);
+        throw new Error(`Failed to set AppxBundlePlatforms in vcxproj:\n${error}`);
     }
+
+    // step 4: print the contents of each modified file
+    core.startGroup(`--- ${vcxprojPath} file contents ---`);
+    const updatedVcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
+    core.info(updatedVcxprojContent);
+    core.endGroup();
+
+    core.startGroup(`--- ${packageStoreAssociationFilePath} file contents ---`);
+    const updatedStoreAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
+    core.info(updatedStoreAssociationContent);
+    core.endGroup();
+
+    core.startGroup(`--- ${appxManifestPath} file contents ---`);
+    const updatedAppxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
+    core.info(updatedAppxManifestContent);
+    core.endGroup();
 }
 
 /**
