@@ -230,8 +230,6 @@ async function getCertificatePath(projectPath: string): Promise<string> {
  */
 async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: string): Promise<void> {
     const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
-    // Ensure the StoreAssociationFile file is readable and writable
-    await fs.promises.access(packageStoreAssociationFilePath, fs.constants.R_OK | fs.constants.W_OK);
     // Always copy the StoreAssociationFile, regardless of existence or content
     await fs.promises.copyFile(sourcePath, packageStoreAssociationFilePath);
     let vcxprojFileContent: string = await fs.promises.readFile(vcxprojPath, 'utf8');
