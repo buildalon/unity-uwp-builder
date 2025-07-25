@@ -229,12 +229,12 @@ async function getCertificatePath(projectPath: string): Promise<string> {
  * Copies StoreAssociationFile into the project directory and ensures it's referenced in the vcxproj
  */
 async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: string): Promise<void> {
-    const destFile = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
+    const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
     try {
         // Copy file if not already present or if source is different
-        if (!fs.existsSync(destFile) || (await fs.promises.readFile(destFile, 'utf8')) !== (await fs.promises.readFile(sourcePath, 'utf8'))) {
-            await fs.promises.copyFile(sourcePath, destFile);
-            core.info(`Copied StoreAssociationFile to ${destFile}`);
+        if (!fs.existsSync(packageStoreAssociationFilePath) || (await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8')) !== (await fs.promises.readFile(sourcePath, 'utf8'))) {
+            await fs.promises.copyFile(sourcePath, packageStoreAssociationFilePath);
+            core.info(`Copied StoreAssociationFile to ${packageStoreAssociationFilePath}`);
         } else {
             core.info(`StoreAssociationFile already exists and is up to date.`);
         }
@@ -284,7 +284,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
     // Step 1: Extract Identity info from StoreAssociationFile and update appxmanifest (without changing version)
     const appxManifestPath = path.join(path.dirname(vcxprojPath), 'Package.appxmanifest');
     try {
-        const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+        const storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
         // Extract MainPackageIdentityName and Publisher from StoreAssociationFile
         const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
         const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
@@ -332,13 +332,13 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         const match = identityRegex.exec(appxManifestContent);
         if (match) {
             const version = match[3];
-            let storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+            let storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
             storeAssociationContent = storeAssociationContent.replace(
                 /<PackageMaxArchitectureVersion>[^<]+<\/PackageMaxArchitectureVersion>/,
                 `<PackageMaxArchitectureVersion>${version}</PackageMaxArchitectureVersion>`
             );
-            await fs.promises.writeFile(destFile, storeAssociationContent, 'utf8');
-            core.info(`Updated ${destFile} with Version from Package.appxmanifest.`);
+            await fs.promises.writeFile(packageStoreAssociationFilePath, storeAssociationContent, 'utf8');
+            core.info(`Updated ${packageStoreAssociationFilePath} with Version from Package.appxmanifest.`);
         } else {
             core.warning(`No Identity found in Package.appxmanifest.`);
         }
@@ -348,7 +348,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
 
     // Step 3: Set AppxBundlePlatforms in vcxproj based on Package.StoreAssociation.xml <PackageArchitecture> tags
     try {
-        const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+        const storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
         // Find all <PackageArchitecture> tags
         const archRegex = /<PackageArchitecture>([^<]+)<\/PackageArchitecture>/gi;
         const architectures: string[] = [];
@@ -396,8 +396,8 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         core.info(updatedVcxprojContent);
         core.endGroup();
 
-        core.startGroup(`--- ${destFile} file contents ---`);
-        const updatedStoreAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+        core.startGroup(`--- ${packageStoreAssociationFilePath} file contents ---`);
+        const updatedStoreAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
         core.info(updatedStoreAssociationContent);
         core.endGroup();
 
