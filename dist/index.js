@@ -30392,13 +30392,13 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
     core.info(updatedAppxManifestContent);
     core.endGroup();
 }
+const windowsKitPaths = [
+    'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
+    'C:\\Program Files\\Windows Kits\\10\\Include'
+];
 async function isWindowsSDKVersionAvailable(version) {
     try {
-        const possiblePaths = [
-            'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
-            'C:\\Program Files\\Windows Kits\\10\\Include'
-        ];
-        for (const basePath of possiblePaths) {
+        for (const basePath of windowsKitPaths) {
             try {
                 const versionPath = path.join(basePath, version);
                 await fs.promises.access(versionPath, fs.constants.R_OK);
@@ -30419,12 +30419,8 @@ async function isWindowsSDKVersionAvailable(version) {
 }
 async function getAvailableWindowsSDKVersion() {
     try {
-        const possiblePaths = [
-            'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
-            'C:\\Program Files\\Windows Kits\\10\\Include'
-        ];
         let allVersions = [];
-        for (const basePath of possiblePaths) {
+        for (const basePath of windowsKitPaths) {
             try {
                 await fs.promises.access(basePath, fs.constants.R_OK);
                 const entries = await fs.promises.readdir(basePath);
