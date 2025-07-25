@@ -288,12 +288,14 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         // Extract MainPackageIdentityName and Publisher from StoreAssociationFile
         const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
         const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
-        // Extract DisplayName from StoreAssociationFile if present
+        // Extract ReservedName and DisplayName from StoreAssociationFile if present
+        const reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(storeAssociationContent);
         const displayNameMatch = /<DisplayName>([^<]+)<\/DisplayName>/.exec(storeAssociationContent);
         if (nameMatch && publisherMatch) {
             const name = nameMatch[1];
             const publisher = publisherMatch[1];
-            const displayName = displayNameMatch ? displayNameMatch[1] : name;
+            // Use ReservedName if present, otherwise DisplayName, otherwise fallback to MainPackageIdentityName
+            const displayName = reservedNameMatch ? reservedNameMatch[1] : (displayNameMatch ? displayNameMatch[1] : name);
             // Read appxmanifest
             let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
             // Update Name and Publisher in <Identity> tag, but keep Version
@@ -301,13 +303,12 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
                 /<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/,
                 (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`
             );
-
-            // Update only the <DisplayName> inside <Properties>
+            // Update only the <DisplayName> inside <Properties> to match exactly (including whitespace and punctuation)
+            // This ensures the DisplayName matches the StoreAssociationFile ReservedName value, fixing APPX1607
             appxManifestContent = appxManifestContent.replace(
                 /(<Properties[\s\S]*?<DisplayName>)([^<]*)(<\/DisplayName>[\s\S]*?<\/Properties>)/,
                 (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`
             );
-
             await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
             core.info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
             core.info(`Updated Package.appxmanifest DisplayName to: ${displayName}`);

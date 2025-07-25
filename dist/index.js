@@ -30317,11 +30317,12 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
         const storeAssociationContent = await fs.promises.readFile(destFile, 'utf8');
         const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
         const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
+        const reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(storeAssociationContent);
         const displayNameMatch = /<DisplayName>([^<]+)<\/DisplayName>/.exec(storeAssociationContent);
         if (nameMatch && publisherMatch) {
             const name = nameMatch[1];
             const publisher = publisherMatch[1];
-            const displayName = displayNameMatch ? displayNameMatch[1] : name;
+            const displayName = reservedNameMatch ? reservedNameMatch[1] : (displayNameMatch ? displayNameMatch[1] : name);
             let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
             appxManifestContent = appxManifestContent.replace(/<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/, (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`);
             appxManifestContent = appxManifestContent.replace(/(<Properties[\s\S]*?<DisplayName>)([^<]*)(<\/DisplayName>[\s\S]*?<\/Properties>)/, (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`);
