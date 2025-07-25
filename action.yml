@@ -8,18 +8,18 @@ inputs:
     description: The directory that contains the exported visual studio project from Unity.
     required: true
   configuration:
-    description: The configuration to use when building the visual studio project. Defaults to `Master`.
+    description: The configuration to use when building the visual studio project. Can be `Master`, `Release`, or `Debug`.
     required: false
     default: 'Master'
   platform:
-    description: 'The platform to use when building the visual studio project. Can be: `Any CPU`, `x86`, `x64`, `ARM`, or `ARM64`.'
+    description: 'The platform to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. Defaults to platforms defined in the visual studio project.'
     required: false
   package-type:
-    description: 'The type of package to generate. Can be: `sideload` or `upload`. Defaults to `sideload`.'
+    description: 'The type of package to generate. Can be: `sideload` or `upload`.'
     required: false
     default: 'sideload'
   certificate-path:
-    description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate.'
+    description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `upload`. Defaults to the Unity generated test certificate.'
     required: false
   certificate-password:
     description: 'The password for the certificate to use when packaging the UWP project. Required when providing your own certificate.'
@@ -31,13 +31,11 @@ inputs:
     description: Additional arguments to pass to the msbuild command.
     required: false
   store-association-path:
-    description: 'The path to the Package.StoreAssociation.xml file. Optional.'
+    description: 'The path to the Package.StoreAssociation.xml file. This is required when `package-type === upload`.'
     required: false
 outputs:
-  bundles:
-    description: The paths to the generated bundles in json array.
   output-directory:
-    description: The path to the output-directory.
+    description: The path to the package output directory.
 runs:
   using: 'node20'
   main: 'dist/index.js'
