@@ -389,6 +389,22 @@ async function copyAndEnsureStoreAssociation(vcxprojPath: string, sourcePath: st
         } else {
             core.warning('No <PackageArchitecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
         }
+
+        // step 4: print the contents of each modified file
+        core.startGroup(`--- ${vcxprojPath} file contents ---`);
+        const updatedVcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
+        core.info(updatedVcxprojContent);
+        core.endGroup();
+
+        core.startGroup(`--- ${destFile} file contents ---`);
+        const updatedStoreAssociationContent = await fs.promises.readFile(destFile, 'utf8');
+        core.info(updatedStoreAssociationContent);
+        core.endGroup();
+
+        core.startGroup(`--- ${appxManifestPath} file contents ---`);
+        const updatedAppxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
+        core.info(updatedAppxManifestContent);
+        core.endGroup();
     } catch (error) {
         core.warning(`Failed to set AppxBundlePlatforms in vcxproj: ${error}`);
     }
