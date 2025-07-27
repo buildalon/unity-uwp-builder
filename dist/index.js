@@ -34801,8 +34801,6 @@ async function getUwpProjectInputs() {
         outputDirectory = path.join(projectDirectory, projectName, `AppPackages`);
     }
     core.info(`outputDirectory: "${outputDirectory}"`);
-    await fs.promises.mkdir(outputDirectory, { recursive: true });
-    await fs.promises.access(outputDirectory, fs.constants.R_OK | fs.constants.W_OK);
     const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
     const vcxprojFiles = await vcxprojGlobber.glob();
     if (vcxprojFiles.length === 0) {
