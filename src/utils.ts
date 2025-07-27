@@ -161,7 +161,7 @@ export async function removeWindowsMobileSDKReference(vcxprojPath: string): Prom
     core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
     await writeXml(vcxprojPath, xmlObj);
     core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
-    // printFileContents(vcxprojPath);
+    await printFileContents(vcxprojPath);
   } else {
     core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
   }

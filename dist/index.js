@@ -35094,6 +35094,7 @@ async function removeWindowsMobileSDKReference(vcxprojPath) {
         core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
         await writeXml(vcxprojPath, xmlObj);
         core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        await printFileContents(vcxprojPath);
     }
     else {
         core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
@@ -37156,12 +37157,7 @@ const main = async () => {
         finally {
             core.endGroup();
         }
-        const appPackagesGlobber = await glob.create(path.join(project.outputDirectory, `**`, `*`), { matchDirectories: true });
-        const appPackagesGlobs = await appPackagesGlobber.glob();
-        const outputDirectory = appPackagesGlobs.find(glob => glob.includes(`AppPackages`));
-        if (!outputDirectory) {
-            throw new Error(`output directory AppPackages directory not found.`);
-        }
+        const outputDirectory = project.outputDirectory || path.join(project.projectDirectory, project.projectName, `AppPackages`);
         try {
             await fs.promises.access(outputDirectory, fs.constants.R_OK);
         }
