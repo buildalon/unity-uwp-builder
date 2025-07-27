@@ -63,6 +63,10 @@ describe('UWP Project XML Editing', () => {
     expect(updatedManifest).toContain('Identity');
     expect(updatedManifest).toContain('Publisher');
     expect(updatedManifest).toContain('DisplayName');
+    const vcxprojContent = fs.readFileSync(vcxprojTestFilePath, 'utf8');
+    expect(vcxprojContent).toContain('Package.StoreAssociation.xml');
+    expect(vcxprojContent).toContain('GenerateTemporaryStoreCertificate');
+    expect(vcxprojContent).toContain('true');
   });
 
   it('copyPackageStoreAssociationFile updates vcxproj with StoreAssociation reference and certificate property', async () => {
