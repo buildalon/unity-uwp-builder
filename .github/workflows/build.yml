@@ -23,8 +23,6 @@ jobs:
       contents: read
     env:
       BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
-      TEMPLATE_PATH: ''
-      UNITY_PROJECT_PATH: '' # set by unity-setup action
     steps:
       - uses: actions/checkout@v4
       - run: 'npm install -g openupm-cli'
@@ -33,38 +31,29 @@ jobs:
           version-file: 'None'
           build-targets: ${{ matrix.build-target }}
           unity-version: ${{ matrix.unity-version }}
-      - name: Find Unity Template Path
-        run: |
-          $rootPath = $env:UNITY_EDITOR_PATH -replace "Editor.*", ""
-          Write-Host "ROOT_PATH=$rootPath"
-          $templatePath = Get-ChildItem -Recurse -Filter "com.unity.template.3d*.tgz" -Path $rootPath | Select-Object -First 1 | Select-Object -ExpandProperty FullName
-          Write-Host "TEMPLATE_PATH=$templatePath"
-          echo "TEMPLATE_PATH=$templatePath" >> $env:GITHUB_ENV
-          $projectPath = "${{ github.workspace }}/Test Project"
-          echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
-        shell: pwsh
       - uses: buildalon/activate-unity-license@v1
         with:
           license: 'Personal'
           username: ${{ secrets.UNITY_USERNAME }}
           password: ${{ secrets.UNITY_PASSWORD }}
-      - uses: buildalon/unity-action@v2
-        name: Create Test Project
+      - uses: buildalon/create-unity-project@v1
+        id: project
         with:
-          log-name: 'create-test-project'
-          args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
+          project-name: 'Buildalon UWP Test Project'
       - run: 'openupm add com.virtualmaker.buildalon'
         name: Add Build Pipeline Package
-        working-directory: ${{ env.UNITY_PROJECT_PATH }}
+        working-directory: ${{ steps.project.outputs.project-path }}
       - uses: buildalon/unity-action@v2
         name: '${{ matrix.build-target }}-Validate'
         with:
+          project-path: ${{ steps.project.outputs.project-path }}
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Validate'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
       - uses: buildalon/unity-action@v2
         name: '${{ matrix.build-target }}-Build'
         with:
+          project-path: ${{ steps.project.outputs.project-path }}
           build-target: ${{ matrix.build-target }}
           log-name: '${{ matrix.build-target }}-Build'
           args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory ${{ env.BUILD_OUTPUT_PATH }} -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }} -wsaUWPSDK ${{ matrix.windows-sdk-version }}'
