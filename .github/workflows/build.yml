@@ -102,7 +102,7 @@ jobs:
           certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
           certificate-password: ${{ matrix.certificate-type == 'custom' && 'TestPassword123' || '' }}
           windows-sdk-version: ${{ matrix.windows-sdk-version }}
-          store-association-file-path: ${{ matrix.uwp-package-type == 'upload' && matrix.store-association-file-path || '' }}
+          store-association-path: ${{ matrix.uwp-package-type == 'upload' && matrix.store-association-path || '' }}
       - name: Validate Outputs
         shell: bash
         run: |
