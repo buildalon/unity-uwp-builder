@@ -28196,7 +28196,7 @@ async function getUwpProjectInputs() {
         if (!il2cppOutputProjectVcxProjPath && path.basename(file).includes('Il2CppOutputProject')) {
             il2cppOutputProjectVcxProjPath = file;
         }
-        if (!vcxprojPath) {
+        else if (!vcxprojPath && path.basename(file) === `${projectName}.vcxproj`) {
             vcxprojPath = file;
         }
     }
