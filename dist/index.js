@@ -28179,11 +28179,7 @@ async function getUwpProjectInputs() {
     else {
         outputDirectory = path.join(projectDirectory, `AppPackages`);
     }
-    if (fs.existsSync(outputDirectory)) {
-        core.info(`Cleaning output directory: ${outputDirectory}...`);
-        await fs.promises.rm(outputDirectory, { recursive: true, force: true });
-    }
-    await fs.promises.mkdir(outputDirectory, { recursive: true });
+    core.info(`outputDirectory: "${outputDirectory}"`);
     const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
     const vcxprojFiles = await vcxprojGlobber.glob();
     if (vcxprojFiles.length === 0) {
@@ -30450,6 +30446,7 @@ const main = async () => {
             throw new Error(`This action can only be performed on a Windows runner.`);
         }
         const project = await (0, inputs_1.getUwpProjectInputs)();
+        core.info(`Using output directory: ${project.outputDirectory}`);
         const buildArgs = [
             `/t:Build`,
             `/p:AppxBundle=Always`,

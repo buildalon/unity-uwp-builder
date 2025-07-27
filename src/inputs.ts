@@ -48,11 +48,7 @@ export async function getUwpProjectInputs(): Promise<UwpProject> {
   } else {
     outputDirectory = path.join(projectDirectory, `AppPackages`);
   }
-  if (fs.existsSync(outputDirectory)) {
-    core.info(`Cleaning output directory: ${outputDirectory}...`);
-    await fs.promises.rm(outputDirectory, { recursive: true, force: true });
-  }
-  await fs.promises.mkdir(outputDirectory, { recursive: true });
+  core.info(`outputDirectory: "${outputDirectory}"`);
   const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
   const vcxprojFiles = await vcxprojGlobber.glob();
   if (vcxprojFiles.length === 0) {
