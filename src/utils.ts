@@ -1,10 +1,7 @@
 import core = require('@actions/core');
 import fs = require('fs');
 import path = require('path');
-import {
-  XMLParser,
-  XMLBuilder
-} from 'fast-xml-parser';
+import xml = require('xml2js');
 
 /**
  * Common paths where Windows SDK versions are typically installed.
@@ -72,12 +69,9 @@ export async function isWindowsSDKVersionAvailable(version: string): Promise<boo
  * @param filePath The path to the XML file to parse
  */
 export async function parseXml(filePath: string): Promise<any> {
-  const fileContent: string = fs.readFileSync(filePath).toString('utf8');
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    preserveOrder: true
-  });
-  return parser.parse(fileContent);
+  const fileContent: string = fs.readFileSync(filePath, 'utf8');
+  const parser = new xml.Parser();
+  return await parser.parseStringPromise(fileContent);
 }
 /**
  * Writes an XML file
@@ -85,12 +79,20 @@ export async function parseXml(filePath: string): Promise<any> {
  * @param xmlObject The object to convert to XML
  */
 export async function writeXml(filePath: string, xmlObject: any): Promise<void> {
-  const builder = new XMLBuilder({
-    ignoreAttributes: false,
-    preserveOrder: true
+  const builder = new xml.Builder({
+    xmldec: {
+      version: '1.0',
+      encoding: 'utf-8',
+      standalone: null
+    },
+    renderOpts: {
+      pretty: true,
+      indent: '  ',
+      newline: '\n',
+    },
+    headless: false
   });
-  const xmlContent = builder.build(xmlObject);
-  await fs.promises.writeFile(filePath, xmlContent, 'utf8');
+  await fs.promises.writeFile(filePath, builder.buildObject(xmlObject), 'utf8');
 }
 /**
  * Prints the contents of a file to the action log
@@ -113,42 +115,57 @@ export async function printFileContents(filePath: string): Promise<void> {
  * Removes the WindowsMobile SDKReference from the vcxproj file if it exists
  * This is necessary for Windows SDK versions >= 10.0.26100.0 since it is no longer supported
  */
-export async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<void> {
-  const vcxprojXml = await parseXml(vcxprojPath);
+export async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<boolean> {
+  const xmlObj = await parseXml(vcxprojPath);
   let found = false;
-  for (const node of vcxprojXml) {
-    if (node.Project) {
-      for (const item of node.Project) {
-        if (item.ItemGroup) {
-          for (const group of item.ItemGroup) {
-            if (group.SDKReference) {
-              let sdkRefs = Array.isArray(group.SDKReference) ? group.SDKReference : [group.SDKReference];
-              const originalLength = sdkRefs.length;
-              sdkRefs = sdkRefs.filter((ref: { [x: string]: any; Include: any; }) => {
-                const include = ref['@_Include'] || ref.Include;
-                if (include && include.includes('WindowsMobile')) {
-                  found = true;
-                  return false;
-                }
-                return true;
-              });
-              if (sdkRefs.length !== originalLength) {
-                group.SDKReference = sdkRefs.length === 1 ? sdkRefs[0] : sdkRefs;
-              }
-            }
+  if (xmlObj.Project && xmlObj.Project.ItemGroup) {
+    let itemGroups = Array.isArray(xmlObj.Project.ItemGroup)
+      ? xmlObj.Project.ItemGroup
+      : [xmlObj.Project.ItemGroup];
+    itemGroups = itemGroups.filter((group: any) => {
+      if (group.SDKReference) {
+        const sdkRefs = Array.isArray(group.SDKReference) ? group.SDKReference : [group.SDKReference];
+        const hasWindowsMobile = sdkRefs.some((sdkRef: any) => {
+          if (sdkRef.$ && sdkRef.$.Include && sdkRef.$.Include.includes('WindowsMobile')) {
+            found = true;
+            return true;
           }
+          return false;
+        });
+        if (hasWindowsMobile) {
+          return false;
         }
       }
+      return true;
+    });
+    xmlObj.Project.ItemGroup = itemGroups.length === 1 ? itemGroups[0] : itemGroups;
+  }
+  if (xmlObj.Project && xmlObj.Project.SDKReference) {
+    let sdkRefs = Array.isArray(xmlObj.Project.SDKReference)
+      ? xmlObj.Project.SDKReference
+      : [xmlObj.Project.SDKReference];
+    sdkRefs = sdkRefs.filter((sdkRef: any) => {
+      if (sdkRef.$ && sdkRef.$.Include && sdkRef.$.Include.includes('WindowsMobile')) {
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    if (sdkRefs.length === 0) {
+      delete xmlObj.Project.SDKReference;
+    } else {
+      xmlObj.Project.SDKReference = sdkRefs.length === 1 ? sdkRefs[0] : sdkRefs;
     }
   }
   if (found) {
     core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
-    await writeXml(vcxprojPath, vcxprojXml);
+    await writeXml(vcxprojPath, xmlObj);
     core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
-    printFileContents(vcxprojPath);
+    // printFileContents(vcxprojPath);
   } else {
     core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
   }
+  return found;
 }
 /**
  * Associates the UWP project with the Microsoft Store using the provided StoreAssociationFile.
@@ -168,11 +185,20 @@ export async function associateAppWithStore(vcxprojPath: string, sourcePackageAs
   const appxManifestPath = path.join(path.dirname(vcxprojPath), 'Package.appxmanifest');
   await fs.promises.access(appxManifestPath, fs.constants.R_OK | fs.constants.W_OK);
   const appxManifestXml = await parseXml(appxManifestPath);
-  appxManifestXml.Package.Identity['@_Name'] = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo.MainPackageIdentityName;
-  appxManifestXml.Package.Identity['@_Publisher'] = packageStoreAssociationXml.StoreAssociation.PublisherDisplayName;
-  appxManifestXml.Package.Properties['@_DisplayName'] = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo.ReservedNames.ReservedName;
-  appxManifestXml.Package.Properties['@_PublisherDisplayName'] = packageStoreAssociationXml.StoreAssociation.PublisherDisplayName;
-  appxManifestXml.Applications.Application.VisualElements['@_DisplayName'] = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo.ReservedNames.ReservedName;
+  if (appxManifestXml.Package.Identity && Array.isArray(appxManifestXml.Package.Identity)) {
+    appxManifestXml.Package.Identity[0].$.Name = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo[0].MainPackageIdentityName[0];
+    appxManifestXml.Package.Identity[0].$.Publisher = packageStoreAssociationXml.StoreAssociation.PublisherDisplayName[0];
+  }
+  if (appxManifestXml.Package.Properties && Array.isArray(appxManifestXml.Package.Properties)) {
+    appxManifestXml.Package.Properties[0].DisplayName = [packageStoreAssociationXml.StoreAssociation.ProductReservedInfo[0].ReservedNames[0].ReservedName[0]];
+    appxManifestXml.Package.Properties[0].PublisherDisplayName = [packageStoreAssociationXml.StoreAssociation.PublisherDisplayName[0]];
+  }
+  if (appxManifestXml.Package.Applications && Array.isArray(appxManifestXml.Package.Applications)) {
+    const app = appxManifestXml.Package.Applications[0].Application?.[0];
+    if (app && app['uap:VisualElements'] && Array.isArray(app['uap:VisualElements'])) {
+      app['uap:VisualElements'][0].$.DisplayName = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo[0].ReservedNames[0].ReservedName[0];
+    }
+  }
   await writeXml(appxManifestPath, appxManifestXml);
   core.info(`Updated Package.appxmanifest with identity information from ${packageStoreAssociationFilePath}`);
   await printFileContents(appxManifestPath);
@@ -183,51 +209,47 @@ export async function associateAppWithStore(vcxprojPath: string, sourcePackageAs
  * @param vcxprojPath The path to the vcxproj file of the UWP project.
  * @param sourcePackageAssociationFilePath The path to the source Package.StoreAssociation.xml file.
  */
-async function copyPackageStoreAssociationFile(vcxprojPath: string, sourcePackageAssociationFilePath: string): Promise<string> {
+export async function copyPackageStoreAssociationFile(vcxprojPath: string, sourcePackageAssociationFilePath: string): Promise<string> {
   const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
-  // check if the source file exists, and is readable and writable
   await fs.promises.access(sourcePackageAssociationFilePath, fs.constants.R_OK | fs.constants.W_OK);
   await fs.promises.copyFile(sourcePackageAssociationFilePath, packageStoreAssociationFilePath);
   const vcxProjXml = await parseXml(vcxprojPath);
   let hasStoreAssociationFile: boolean = false;
-  // Check if Package.StoreAssociation.xml is already referenced using parsed vcxProjXml.
-  const itemGroups = vcxProjXml.Project.ItemGroup || [];
+  const itemGroups = Array.isArray(vcxProjXml.Project.ItemGroup) ? vcxProjXml.Project.ItemGroup : [vcxProjXml.Project.ItemGroup];
   for (const group of itemGroups) {
-    if (group.None && group.None['@_Include'] === 'Package.StoreAssociation.xml') {
-      hasStoreAssociationFile = true;
-      break;
+    if (group.None) {
+      if (Array.isArray(group.None)) {
+        for (const noneItem of group.None) {
+          if (noneItem.$ && noneItem.$.Include === 'Package.StoreAssociation.xml') {
+            hasStoreAssociationFile = true;
+            break;
+          }
+        }
+      } else if (group.None.$ && group.None.$.Include === 'Package.StoreAssociation.xml') {
+        hasStoreAssociationFile = true;
+        break;
+      }
     }
+    if (hasStoreAssociationFile) break;
   }
   if (!hasStoreAssociationFile) {
     core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
-    // add the new item group to the vcxprojXml under the Project root. Expect that the project root is a valid object.
-    // expect that there are multiple ItemGroup nodes. We need to add it to the ItemGroup that does not contain any attributes.
-    const itemGroups = vcxProjXml.Project.ItemGroup || [];
     itemGroups.push({
-      ItemGroup: {
-        None: {
-          '@_Include': 'Package.StoreAssociation.xml'
-        }
-      }
+      None: [{ $: { Include: 'Package.StoreAssociation.xml' } }]
     });
     vcxProjXml.Project.ItemGroup = itemGroups;
   }
-  // check if PropertyGroup GenerateTemporaryStoreCertificate is set to true, if not, add it or update it
-  const propertyGroups = vcxProjXml.Project.PropertyGroup || [];
+  const propertyGroups = Array.isArray(vcxProjXml.Project.PropertyGroup) ? vcxProjXml.Project.PropertyGroup : [vcxProjXml.Project.PropertyGroup];
   let hasGenerateTemporaryStoreCertificate: boolean = false;
   for (const group of propertyGroups) {
-    if (group.GenerateTemporaryStoreCertificate === 'true') {
+    if (group.GenerateTemporaryStoreCertificate === 'true' || (group.GenerateTemporaryStoreCertificate && group.GenerateTemporaryStoreCertificate[0] === 'true')) {
       hasGenerateTemporaryStoreCertificate = true;
       break;
     }
   }
   if (!hasGenerateTemporaryStoreCertificate) {
     core.info('GenerateTemporaryStoreCertificate is not set to true, updating...');
-    propertyGroups.push({
-      PropertyGroup: {
-        GenerateTemporaryStoreCertificate: 'true'
-      }
-    });
+    propertyGroups.push({ GenerateTemporaryStoreCertificate: ['true'] });
   }
   vcxProjXml.Project.PropertyGroup = propertyGroups;
   await writeXml(vcxprojPath, vcxProjXml);

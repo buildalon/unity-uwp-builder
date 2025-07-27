@@ -1,0 +1,2173 @@
+{
+  "StoreAssociation": {
+    "$": {
+      "xmlns": "http://schemas.microsoft.com/appx/2010/storeassociation"
+    },
+    "Publisher": [
+      "CN=A9939E6B-11CE-4DDD-89E7-01121EBB4FA9"
+    ],
+    "PublisherDisplayName": [
+      "Rage Against The Pixel"
+    ],
+    "DeveloperAccountType": [
+      "MSA"
+    ],
+    "GeneratePackageHash": [
+      "http://www.w3.org/2001/04/xmlenc#sha256"
+    ],
+    "SupportedLocales": [
+      {
+        "Language": [
+          {
+            "$": {
+              "Code": "af",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "af-za",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "am",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "am-et",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-ae",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-bh",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-dz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-eg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-iq",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-jo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-kw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-lb",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-ly",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-ma",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-om",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-qa",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-sa",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-sy",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-tn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ar-ye",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "as",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "as-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az-arab-az",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az-cyrl-az",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "az-latn-az",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "be",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "be-by",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bg-bg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bn-bd",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bn-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bs-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bs-cyrl-ba",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bs-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "bs-latn-ba",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ca",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ca-es",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ca-es-valencia",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "chr-cher",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "chr-cher-us",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "chr-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "cs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "cs-cz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "cy",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "cy-gb",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "da",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "da-dk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "de",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "de-at",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "de-ch",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "de-de",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "de-li",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "de-lu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "el",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "el-gr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-011",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-014",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-018",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-021",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-029",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-053",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-au",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-bz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-ca",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-gb",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-hk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-id",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-ie",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-jm",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-kz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-mt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-my",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-nz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-ph",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-pk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-sg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-tt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-us",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-vn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-za",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "en-zw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-019",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-419",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-ar",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-bo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-cl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-co",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-cr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-do",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-ec",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-es",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-gt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-hn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-mx",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-ni",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-pa",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-pe",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-pr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-py",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-sv",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-us",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-uy",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "es-ve",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "et",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "et-ee",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "eu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "eu-es",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fa",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fa-ir",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fi",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fi-fi",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fil",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fil-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fil-ph",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-011",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-015",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-021",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-029",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-155",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-be",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-ca",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-cd",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-ch",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-ci",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-cm",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-fr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-ht",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-lu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-ma",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-mc",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-ml",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "fr-re",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "frc-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "frp-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ga",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ga-ie",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "gd-gb",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "gd-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "gl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "gl-es",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "gu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "gu-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ha",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ha-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ha-latn-ng",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "he",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "he-il",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hi",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hi-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hr-ba",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hr-hr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hu-hu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hy",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "hy-am",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "id",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "id-id",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ig-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ig-ng",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "is",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "is-is",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "it",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "it-ch",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "it-it",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "iu-cans",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "iu-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "iu-latn-ca",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ja",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ja-jp",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ka",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ka-ge",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "kk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "kk-kz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "km",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "km-kh",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "kn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "kn-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ko",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ko-kr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "kok",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "kok-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ku-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ku-arab-iq",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ky-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ky-kg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lb",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lb-lu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lo-la",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lt-lt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lv",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "lv-lv",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mi",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mi-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mi-nz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mk-mk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ml",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ml-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mn-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mn-mn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mn-mong",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mn-phag",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mr-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ms",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ms-bn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ms-my",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "mt-mt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nb",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nb-no",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ne",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ne-np",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nl-be",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nl-nl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nn-no",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "no",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "no-no",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nso",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "nso-za",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "om",
+              "InMinimumRequirementSet": "false"
+            }
+          },
+          {
+            "$": {
+              "Code": "om-et",
+              "InMinimumRequirementSet": "false"
+            }
+          },
+          {
+            "$": {
+              "Code": "or",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "or-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pa",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pa-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pa-arab-pk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pa-deva",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pa-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pl-pl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "prs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "prs-af",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "prs-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pt-br",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "pt-pt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "quc-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "qut-gt",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "qut-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "quz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "quz-bo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "quz-ec",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "quz-pe",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ro",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ro-ro",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ru",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ru-ru",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "rw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "rw-rw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sd-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sd-arab-pk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sd-deva",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "si",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "si-lk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sk-sk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sl-si",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sq",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sq-al",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-cyrl-ba",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-cyrl-cs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-cyrl-me",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-cyrl-rs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-latn-ba",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-latn-cs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-latn-me",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sr-latn-rs",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sv",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sv-fi",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sv-se",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "sw-ke",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ta",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ta-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "te",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "te-in",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tg-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tg-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tg-cyrl-tj",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tg-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "th",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "th-th",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ti",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ti-et",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tk-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tk-cyrl-tr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tk-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tk-latn-tr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tk-tm",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tn-bw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tn-za",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tr-tr",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tt-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tt-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tt-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "tt-ru",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ug-arab",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ug-cn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ug-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ug-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "uk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "uk-ua",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ur",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "ur-pk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "uz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "uz-cyrl",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "uz-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "uz-latn-uz",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "vi",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "vi-vn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "wo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "wo-sn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "xh",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "xh-za",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "yo-latn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "yo-ng",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-cn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hans",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hans-cn",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hans-sg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hant",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hant-hk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hant-mo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hant-tw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-hk",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-mo",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-sg",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zh-tw",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zu",
+              "InMinimumRequirementSet": "true"
+            }
+          },
+          {
+            "$": {
+              "Code": "zu-za",
+              "InMinimumRequirementSet": "true"
+            }
+          }
+        ]
+      }
+    ],
+    "ProductReservedInfo": [
+      {
+        "MainPackageIdentityName": [
+          "RageAgainstThePixel.RageAgainstThePixelGithubActio"
+        ],
+        "ReservedNames": [
+          {
+            "ReservedName": [
+              "Rage Against The Pixel Github Actions Build Test"
+            ]
+          }
+        ]
+      }
+    ],
+    "AccountPackageIdentityNames": [
+      ""
+    ],
+    "PackageInfoList": [
+      {
+        "$": {
+          "LandingUrl": "https://devcenterapi.dce.mp.microsoft.com/dashboard/Application?appId=9PH45VMXFF8H"
+        }
+      }
+    ]
+  }
+}
