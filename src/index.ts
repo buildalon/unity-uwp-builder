@@ -10,7 +10,6 @@ const main = async () => {
     try {
         if (process.platform !== `win32`) { throw new Error(`This action can only be performed on a Windows runner.`); }
         const project: UwpProject = await getUwpProjectInputs();
-        core.info(`Using output directory: ${project.outputDirectory}`);
         const buildArgs = [
             `/t:Build`,
             `/p:AppxBundle=Always`,

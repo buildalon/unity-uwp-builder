@@ -30465,7 +30465,6 @@ const main = async () => {
             throw new Error(`This action can only be performed on a Windows runner.`);
         }
         const project = await (0, inputs_1.getUwpProjectInputs)();
-        core.info(`Using output directory: ${project.outputDirectory}`);
         const buildArgs = [
             `/t:Build`,
             `/p:AppxBundle=Always`,
