@@ -44,6 +44,7 @@
   ],
   "include": [
     {
+      "os": "windows-latest",
       "uwp-package-type": "upload",
       "store-association-file-path": "src/__tests__/source/Package.StoreAssociation.xml"
     }
