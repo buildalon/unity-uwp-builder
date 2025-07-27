@@ -28128,6 +28128,391 @@ module.exports = {
 
 /***/ }),
 
+/***/ 7063:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getUwpProjectInputs = getUwpProjectInputs;
+const core = __nccwpck_require__(2186);
+const fs = __nccwpck_require__(7147);
+const path = __nccwpck_require__(1017);
+const glob = __nccwpck_require__(8090);
+const types_1 = __nccwpck_require__(5077);
+const utils_1 = __nccwpck_require__(1314);
+async function getUwpProjectInputs() {
+    var _a;
+    let projectDirectory = core.getInput(`project-path`, { required: true });
+    core.info(`project-path: "${projectDirectory}"`);
+    if (!projectDirectory.endsWith(`.sln`)) {
+        projectDirectory = path.join(projectDirectory, `**/*.sln`);
+    }
+    let projectSolutionPath = projectDirectory;
+    if (projectDirectory.includes('*')) {
+        const globber = await glob.create(projectDirectory, { matchDirectories: false });
+        const files = await globber.glob();
+        core.startGroup(`Found solution files:`);
+        files.forEach(file => core.info(`  - "${file}"`));
+        core.endGroup();
+        if (files.length === 0) {
+            throw new Error(`No solution file found.`);
+        }
+        projectSolutionPath = files[0];
+    }
+    core.info(`projectSolutionPath: "${projectSolutionPath}"`);
+    projectDirectory = path.dirname(projectSolutionPath);
+    core.info(`projectDirectory: "${projectDirectory}"`);
+    const projectName = path.basename(projectDirectory);
+    core.info(`projectName: "${projectName}"`);
+    try {
+        await fs.promises.access(projectSolutionPath, fs.constants.R_OK);
+    }
+    catch (error) {
+        throw new Error(`Solution file not found: "${projectSolutionPath}"`);
+    }
+    let outputDirectory;
+    const outputDirectoryInput = core.getInput('output-directory');
+    if (outputDirectoryInput) {
+        outputDirectory = outputDirectoryInput;
+    }
+    else {
+        outputDirectory = path.join(projectDirectory, `AppPackages`);
+    }
+    if (fs.existsSync(outputDirectory)) {
+        core.info(`Cleaning output directory: ${outputDirectory}...`);
+        await fs.promises.rm(outputDirectory, { recursive: true, force: true });
+    }
+    await fs.promises.mkdir(outputDirectory, { recursive: true });
+    const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
+    const vcxprojFiles = await vcxprojGlobber.glob();
+    if (vcxprojFiles.length === 0) {
+        throw new Error(`No vcxproj file found in: "${projectDirectory}"`);
+    }
+    core.startGroup(`Found vcxproj files:`);
+    vcxprojFiles.forEach(file => core.info(`  - "${file}"`));
+    core.endGroup();
+    let vcxprojPath = null;
+    let il2cppOutputProjectVcxProjPath = null;
+    for (const file of vcxprojFiles) {
+        if (!il2cppOutputProjectVcxProjPath && path.basename(file).includes('Il2CppOutputProject')) {
+            il2cppOutputProjectVcxProjPath = file;
+        }
+        if (!vcxprojPath) {
+            vcxprojPath = file;
+        }
+    }
+    if (!vcxprojPath) {
+        throw new Error(`Failed to find ${projectName}.vcxproj file!`);
+    }
+    if (!il2cppOutputProjectVcxProjPath) {
+        throw new Error(`Failed to find Il2CppOutputProject.vcxproj file!`);
+    }
+    core.info(`Using vcxproj: ${vcxprojPath}`);
+    await fs.promises.access(vcxprojPath, fs.constants.R_OK | fs.constants.W_OK);
+    const stat = await fs.promises.stat(vcxprojPath);
+    if (!stat.isFile()) {
+        throw new Error(`vcxproj file not found or is not a valid file: "${vcxprojPath}"`);
+    }
+    const configuration = core.getInput(`configuration`, { required: true });
+    if (!['Debug', 'Release', 'Master'].includes(configuration)) {
+        throw new Error(`Invalid configuration: "${configuration}". Must be one of 'Debug', 'Release', or 'Master'.`);
+    }
+    core.info(`configuration: "${configuration}"`);
+    const packageType = core.getInput(`package-type`, { required: true });
+    if (!['sideload', 'upload'].includes(packageType)) {
+        throw new Error(`Invalid package type: "${packageType}". Must be 'sideload' or 'upload'.`);
+    }
+    core.info(`packageType: "${packageType}"`);
+    const buildPlatformInput = ((_a = core.getInput('platform', { required: false })) === null || _a === void 0 ? void 0 : _a.split(/[,|]/).map(p => p.trim())) || [];
+    const buildPlatform = [];
+    for (const platform of buildPlatformInput) {
+        if (!['x86', 'x64', 'ARM', 'ARM64'].includes(platform)) {
+            throw new Error(`Invalid build platform: "${platform}". Must be one of 'x86', 'x64', 'ARM', or 'ARM64'.`);
+        }
+        buildPlatform.push(platform);
+    }
+    const certificatePath = await getSigningCertificatePath(projectDirectory);
+    const certificatePassword = core.getInput(`certificate-password`);
+    const storeAssociationPath = core.getInput('store-association-path', { required: packageType === 'upload' });
+    if (storeAssociationPath) {
+        core.info(`store-association-path: "${storeAssociationPath}"`);
+        await fs.promises.access(storeAssociationPath, fs.constants.R_OK);
+        await (0, utils_1.associateAppWithStore)(vcxprojPath, storeAssociationPath);
+    }
+    const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
+    let windowsSDKVersion = null;
+    if (specifiedSDKVersion && await (0, utils_1.isWindowsSDKVersionAvailable)(specifiedSDKVersion)) {
+        windowsSDKVersion = specifiedSDKVersion;
+        core.info(`Using specified Windows SDK version: ${windowsSDKVersion}`);
+    }
+    else {
+        windowsSDKVersion = await (0, utils_1.getAvailableWindowsSDKVersion)();
+        core.info(`Using latest available Windows SDK version: ${windowsSDKVersion}`);
+    }
+    if (windowsSDKVersion) {
+        const match = windowsSDKVersion.match(/^10\.0\.(\d+)\.\d+$/);
+        if (match && parseInt(match[1], 10) >= 26100) {
+            core.startGroup('Removing WindowsMobile SDKReference from all VCXProj files...');
+            await (0, utils_1.removeWindowsMobileSDKReference)(vcxprojPath);
+            await (0, utils_1.removeWindowsMobileSDKReference)(il2cppOutputProjectVcxProjPath);
+            core.endGroup();
+        }
+    }
+    return new types_1.UwpProject(projectDirectory, projectSolutionPath, path.basename(projectDirectory), vcxprojPath, il2cppOutputProjectVcxProjPath, packageType, outputDirectory, configuration, buildPlatform, certificatePath, certificatePassword, windowsSDKVersion);
+}
+async function getSigningCertificatePath(projectPath) {
+    let certificatePath = core.getInput(`certificate-path`);
+    if (!certificatePath || certificatePath.trim() === ``) {
+        certificatePath = `${projectPath}/**/*.pfx`;
+    }
+    core.info(`certificatePath: "${certificatePath}"`);
+    if (!certificatePath.endsWith(`.pfx`)) {
+        certificatePath = path.join(certificatePath, `**/*.pfx`);
+    }
+    if (certificatePath.includes(`*`)) {
+        const certificateGlobber = await glob.create(certificatePath);
+        const certificateFiles = await certificateGlobber.glob();
+        core.info(`Found certificate files:`);
+        certificateFiles.forEach(file => core.info(`  - "${file}"`));
+        if (certificateFiles.length === 0) {
+            throw new Error(`No certificate file found: "${certificatePath}". Make sure Unity generated a test certificate or provide a custom certificate path.`);
+        }
+        const unityCertificate = certificateFiles.find(file => file.includes('WSATestCertificate.pfx'));
+        certificatePath = unityCertificate || certificateFiles[0];
+    }
+    try {
+        await fs.promises.access(certificatePath, fs.constants.R_OK);
+        const stat = await fs.promises.stat(certificatePath);
+        if (!stat.isFile()) {
+            throw new Error(`Certificate path is not a valid file: "${certificatePath}"`);
+        }
+    }
+    catch (error) {
+        throw new Error(`Certificate file not found: "${certificatePath}". Make sure the certificate exists and is readable.`);
+    }
+    core.info(`Using certificate: ${certificatePath}`);
+    return certificatePath;
+}
+
+
+/***/ }),
+
+/***/ 5077:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UwpProject = void 0;
+class UwpProject {
+    constructor(projectDirectory, projectSolutionPath, projectName, projectVcxProjPath, il2cppOutputProjectVcxProjPath, packageType, outputDirectory, configuration, buildPlatform, certificatePath, certificatePassword, windowsSdkVersion) {
+        this.projectDirectory = projectDirectory;
+        this.projectSolutionPath = projectSolutionPath;
+        this.projectName = projectName;
+        this.projectVcxProjPath = projectVcxProjPath;
+        this.il2cppOutputProjectVcxProjPath = il2cppOutputProjectVcxProjPath;
+        this.packageType = packageType;
+        this.outputDirectory = outputDirectory;
+        this.configuration = configuration;
+        this.buildPlatform = buildPlatform;
+        this.certificatePath = certificatePath;
+        this.certificatePassword = certificatePassword;
+        this.windowsSdkVersion = windowsSdkVersion;
+    }
+}
+exports.UwpProject = UwpProject;
+
+
+/***/ }),
+
+/***/ 1314:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getAvailableWindowsSDKVersion = getAvailableWindowsSDKVersion;
+exports.isWindowsSDKVersionAvailable = isWindowsSDKVersionAvailable;
+exports.parseXml = parseXml;
+exports.writeXml = writeXml;
+exports.printFileContents = printFileContents;
+exports.removeWindowsMobileSDKReference = removeWindowsMobileSDKReference;
+exports.associateAppWithStore = associateAppWithStore;
+const core = __nccwpck_require__(2186);
+const fs = __nccwpck_require__(7147);
+const path = __nccwpck_require__(1017);
+const fast_xml_parser_1 = __nccwpck_require__(4577);
+const windowsKitPaths = [
+    'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
+    'C:\\Program Files\\Windows Kits\\10\\Include'
+];
+async function getAvailableWindowsSDKVersion() {
+    const allVersions = [];
+    for (const basePath of windowsKitPaths) {
+        try {
+            await fs.promises.access(basePath, fs.constants.R_OK);
+            const entries = await fs.promises.readdir(basePath);
+            const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
+            allVersions.push(...versions);
+            core.debug(`Found Windows SDK versions in ${basePath}:`);
+            versions.forEach(version => core.debug(`  - ${version}`));
+        }
+        catch (error) {
+            continue;
+        }
+    }
+    if (allVersions.length === 0) {
+        throw new Error('No Windows SDK versions found in standard installation paths.');
+    }
+    const uniqueVersions = [...new Set(allVersions)].sort((a, b) => {
+        const aParts = a.split('.').map(Number);
+        const bParts = b.split('.').map(Number);
+        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+            const aVal = aParts[i] || 0;
+            const bVal = bParts[i] || 0;
+            if (aVal !== bVal) {
+                return bVal - aVal;
+            }
+        }
+        return 0;
+    });
+    core.info(`All available Windows SDK versions:`);
+    uniqueVersions.forEach(version => core.info(`  - ${version}`));
+    return uniqueVersions[0];
+}
+async function isWindowsSDKVersionAvailable(version) {
+    for (const basePath of windowsKitPaths) {
+        try {
+            const versionPath = path.join(basePath, version);
+            await fs.promises.access(versionPath, fs.constants.R_OK);
+            core.info(`Found Windows SDK version ${version} at: ${versionPath}`);
+            return true;
+        }
+        catch (error) {
+            continue;
+        }
+    }
+    core.warning(`Windows SDK version ${version} not found in standard locations.`);
+    return false;
+}
+async function parseXml(filePath) {
+    const fileContent = fs.readFileSync(filePath).toString('utf8');
+    const parser = new fast_xml_parser_1.XMLParser({
+        ignoreAttributes: false,
+        preserveOrder: true
+    });
+    return parser.parse(fileContent);
+}
+async function writeXml(filePath, xmlObject) {
+    const builder = new fast_xml_parser_1.XMLBuilder({
+        ignoreAttributes: false,
+        preserveOrder: true
+    });
+    const xmlContent = builder.build(xmlObject);
+    await fs.promises.writeFile(filePath, xmlContent, 'utf8');
+}
+async function printFileContents(filePath) {
+    const fileHandle = await fs.promises.open(filePath, 'r');
+    try {
+        const content = await fileHandle.readFile('utf8');
+        core.startGroup(`----- ${filePath} -----`);
+        core.info(content);
+        core.endGroup();
+    }
+    catch (error) {
+        core.error(`Failed to read file ${filePath}: ${error}`);
+    }
+    finally {
+        await fileHandle.close();
+    }
+}
+async function removeWindowsMobileSDKReference(vcxprojPath) {
+    var _a;
+    const vcxprojXml = await parseXml(vcxprojPath);
+    const sdkReferences = (_a = vcxprojXml.Project.ItemGroup) === null || _a === void 0 ? void 0 : _a.find((group) => group.SDKReference);
+    if (sdkReferences) {
+        const windowsMobileReferences = sdkReferences.SDKReference.filter((ref) => ref.Include && ref.Include.includes('WindowsMobile'));
+        if (windowsMobileReferences.length > 0) {
+            core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
+            sdkReferences.SDKReference = sdkReferences.SDKReference.filter((ref) => !windowsMobileReferences.includes(ref));
+            await writeXml(vcxprojPath, vcxprojXml);
+            core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+            printFileContents(vcxprojPath);
+        }
+        else {
+            core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
+        }
+    }
+    else {
+        core.info(`No SDKReference found in ${vcxprojPath}`);
+    }
+}
+async function associateAppWithStore(vcxprojPath, sourcePackageAssociationFilePath) {
+    const packageStoreAssociationFilePath = await copyPackageStoreAssociationFile(vcxprojPath, sourcePackageAssociationFilePath);
+    const packageStoreAssociationXml = await parseXml(packageStoreAssociationFilePath);
+    const appxManifestPath = path.join(path.dirname(vcxprojPath), 'Package.appxmanifest');
+    await fs.promises.access(appxManifestPath, fs.constants.R_OK | fs.constants.W_OK);
+    const appxManifestXml = await parseXml(appxManifestPath);
+    appxManifestXml.Package.Identity['@_Name'] = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo.MainPackageIdentityName;
+    appxManifestXml.Package.Identity['@_Publisher'] = packageStoreAssociationXml.StoreAssociation.PublisherDisplayName;
+    appxManifestXml.Package.Properties['@_DisplayName'] = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo.ReservedNames.ReservedName;
+    appxManifestXml.Package.Properties['@_PublisherDisplayName'] = packageStoreAssociationXml.StoreAssociation.PublisherDisplayName;
+    appxManifestXml.Applications.Application.VisualElements['@_DisplayName'] = packageStoreAssociationXml.StoreAssociation.ProductReservedInfo.ReservedNames.ReservedName;
+    await writeXml(appxManifestPath, appxManifestXml);
+    core.info(`Updated Package.appxmanifest with identity information from ${packageStoreAssociationFilePath}`);
+    await printFileContents(appxManifestPath);
+}
+async function copyPackageStoreAssociationFile(vcxprojPath, sourcePackageAssociationFilePath) {
+    const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
+    await fs.promises.access(sourcePackageAssociationFilePath, fs.constants.R_OK | fs.constants.W_OK);
+    await fs.promises.copyFile(sourcePackageAssociationFilePath, packageStoreAssociationFilePath);
+    const vcxProjXml = await parseXml(vcxprojPath);
+    let hasStoreAssociationFile = false;
+    const itemGroups = vcxProjXml.Project.ItemGroup || [];
+    for (const group of itemGroups) {
+        if (group.None && group.None['@_Include'] === 'Package.StoreAssociation.xml') {
+            hasStoreAssociationFile = true;
+            break;
+        }
+    }
+    if (!hasStoreAssociationFile) {
+        core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
+        const itemGroups = vcxProjXml.Project.ItemGroup || [];
+        itemGroups.push({
+            ItemGroup: {
+                None: {
+                    '@_Include': 'Package.StoreAssociation.xml'
+                }
+            }
+        });
+        vcxProjXml.Project.ItemGroup = itemGroups;
+    }
+    const propertyGroups = vcxProjXml.Project.PropertyGroup || [];
+    let hasGenerateTemporaryStoreCertificate = false;
+    for (const group of propertyGroups) {
+        if (group.GenerateTemporaryStoreCertificate === 'true') {
+            hasGenerateTemporaryStoreCertificate = true;
+            break;
+        }
+    }
+    if (!hasGenerateTemporaryStoreCertificate) {
+        core.info('GenerateTemporaryStoreCertificate is not set to true, updating...');
+        propertyGroups.push({
+            PropertyGroup: {
+                GenerateTemporaryStoreCertificate: 'true'
+            }
+        });
+    }
+    vcxProjXml.Project.PropertyGroup = propertyGroups;
+    await writeXml(vcxprojPath, vcxProjXml);
+    await printFileContents(vcxprojPath);
+    return packageStoreAssociationFilePath;
+}
+
+
+/***/ }),
+
 /***/ 4978:
 /***/ ((module) => {
 
@@ -29999,6 +30384,13 @@ function parseParams (str) {
 module.exports = parseParams
 
 
+/***/ }),
+
+/***/ 4577:
+/***/ ((module) => {
+
+(()=>{"use strict";var t={d:(e,n)=>{for(var i in n)t.o(n,i)&&!t.o(e,i)&&Object.defineProperty(e,i,{enumerable:!0,get:n[i]})},o:(t,e)=>Object.prototype.hasOwnProperty.call(t,e),r:t=>{"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(t,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(t,"__esModule",{value:!0})}},e={};t.r(e),t.d(e,{XMLBuilder:()=>ft,XMLParser:()=>st,XMLValidator:()=>mt});const n=":A-Za-z_\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD",i=new RegExp("^["+n+"]["+n+"\\-.\\d\\u00B7\\u0300-\\u036F\\u203F-\\u2040]*$");function s(t,e){const n=[];let i=e.exec(t);for(;i;){const s=[];s.startIndex=e.lastIndex-i[0].length;const r=i.length;for(let t=0;t<r;t++)s.push(i[t]);n.push(s),i=e.exec(t)}return n}const r=function(t){return!(null==i.exec(t))},o={allowBooleanAttributes:!1,unpairedTags:[]};function a(t,e){e=Object.assign({},o,e);const n=[];let i=!1,s=!1;"\ufeff"===t[0]&&(t=t.substr(1));for(let o=0;o<t.length;o++)if("<"===t[o]&&"?"===t[o+1]){if(o+=2,o=u(t,o),o.err)return o}else{if("<"!==t[o]){if(l(t[o]))continue;return x("InvalidChar","char '"+t[o]+"' is not expected.",N(t,o))}{let a=o;if(o++,"!"===t[o]){o=h(t,o);continue}{let d=!1;"/"===t[o]&&(d=!0,o++);let f="";for(;o<t.length&&">"!==t[o]&&" "!==t[o]&&"\t"!==t[o]&&"\n"!==t[o]&&"\r"!==t[o];o++)f+=t[o];if(f=f.trim(),"/"===f[f.length-1]&&(f=f.substring(0,f.length-1),o--),!r(f)){let e;return e=0===f.trim().length?"Invalid space after '<'.":"Tag '"+f+"' is an invalid name.",x("InvalidTag",e,N(t,o))}const p=c(t,o);if(!1===p)return x("InvalidAttr","Attributes for '"+f+"' have open quote.",N(t,o));let b=p.value;if(o=p.index,"/"===b[b.length-1]){const n=o-b.length;b=b.substring(0,b.length-1);const s=g(b,e);if(!0!==s)return x(s.err.code,s.err.msg,N(t,n+s.err.line));i=!0}else if(d){if(!p.tagClosed)return x("InvalidTag","Closing tag '"+f+"' doesn't have proper closing.",N(t,o));if(b.trim().length>0)return x("InvalidTag","Closing tag '"+f+"' can't have attributes or invalid starting.",N(t,a));if(0===n.length)return x("InvalidTag","Closing tag '"+f+"' has not been opened.",N(t,a));{const e=n.pop();if(f!==e.tagName){let n=N(t,e.tagStartPos);return x("InvalidTag","Expected closing tag '"+e.tagName+"' (opened in line "+n.line+", col "+n.col+") instead of closing tag '"+f+"'.",N(t,a))}0==n.length&&(s=!0)}}else{const r=g(b,e);if(!0!==r)return x(r.err.code,r.err.msg,N(t,o-b.length+r.err.line));if(!0===s)return x("InvalidXml","Multiple possible root nodes found.",N(t,o));-1!==e.unpairedTags.indexOf(f)||n.push({tagName:f,tagStartPos:a}),i=!0}for(o++;o<t.length;o++)if("<"===t[o]){if("!"===t[o+1]){o++,o=h(t,o);continue}if("?"!==t[o+1])break;if(o=u(t,++o),o.err)return o}else if("&"===t[o]){const e=m(t,o);if(-1==e)return x("InvalidChar","char '&' is not expected.",N(t,o));o=e}else if(!0===s&&!l(t[o]))return x("InvalidXml","Extra text at the end",N(t,o));"<"===t[o]&&o--}}}return i?1==n.length?x("InvalidTag","Unclosed tag '"+n[0].tagName+"'.",N(t,n[0].tagStartPos)):!(n.length>0)||x("InvalidXml","Invalid '"+JSON.stringify(n.map((t=>t.tagName)),null,4).replace(/\r?\n/g,"")+"' found.",{line:1,col:1}):x("InvalidXml","Start tag expected.",1)}function l(t){return" "===t||"\t"===t||"\n"===t||"\r"===t}function u(t,e){const n=e;for(;e<t.length;e++)if("?"!=t[e]&&" "!=t[e]);else{const i=t.substr(n,e-n);if(e>5&&"xml"===i)return x("InvalidXml","XML declaration allowed only at the start of the document.",N(t,e));if("?"==t[e]&&">"==t[e+1]){e++;break}}return e}function h(t,e){if(t.length>e+5&&"-"===t[e+1]&&"-"===t[e+2]){for(e+=3;e<t.length;e++)if("-"===t[e]&&"-"===t[e+1]&&">"===t[e+2]){e+=2;break}}else if(t.length>e+8&&"D"===t[e+1]&&"O"===t[e+2]&&"C"===t[e+3]&&"T"===t[e+4]&&"Y"===t[e+5]&&"P"===t[e+6]&&"E"===t[e+7]){let n=1;for(e+=8;e<t.length;e++)if("<"===t[e])n++;else if(">"===t[e]&&(n--,0===n))break}else if(t.length>e+9&&"["===t[e+1]&&"C"===t[e+2]&&"D"===t[e+3]&&"A"===t[e+4]&&"T"===t[e+5]&&"A"===t[e+6]&&"["===t[e+7])for(e+=8;e<t.length;e++)if("]"===t[e]&&"]"===t[e+1]&&">"===t[e+2]){e+=2;break}return e}const d='"',f="'";function c(t,e){let n="",i="",s=!1;for(;e<t.length;e++){if(t[e]===d||t[e]===f)""===i?i=t[e]:i!==t[e]||(i="");else if(">"===t[e]&&""===i){s=!0;break}n+=t[e]}return""===i&&{value:n,index:e,tagClosed:s}}const p=new RegExp("(\\s*)([^\\s=]+)(\\s*=)?(\\s*(['\"])(([\\s\\S])*?)\\5)?","g");function g(t,e){const n=s(t,p),i={};for(let t=0;t<n.length;t++){if(0===n[t][1].length)return x("InvalidAttr","Attribute '"+n[t][2]+"' has no space in starting.",E(n[t]));if(void 0!==n[t][3]&&void 0===n[t][4])return x("InvalidAttr","Attribute '"+n[t][2]+"' is without value.",E(n[t]));if(void 0===n[t][3]&&!e.allowBooleanAttributes)return x("InvalidAttr","boolean attribute '"+n[t][2]+"' is not allowed.",E(n[t]));const s=n[t][2];if(!b(s))return x("InvalidAttr","Attribute '"+s+"' is an invalid name.",E(n[t]));if(i.hasOwnProperty(s))return x("InvalidAttr","Attribute '"+s+"' is repeated.",E(n[t]));i[s]=1}return!0}function m(t,e){if(";"===t[++e])return-1;if("#"===t[e])return function(t,e){let n=/\d/;for("x"===t[e]&&(e++,n=/[\da-fA-F]/);e<t.length;e++){if(";"===t[e])return e;if(!t[e].match(n))break}return-1}(t,++e);let n=0;for(;e<t.length;e++,n++)if(!(t[e].match(/\w/)&&n<20)){if(";"===t[e])break;return-1}return e}function x(t,e,n){return{err:{code:t,msg:e,line:n.line||n,col:n.col}}}function b(t){return r(t)}function N(t,e){const n=t.substring(0,e).split(/\r?\n/);return{line:n.length,col:n[n.length-1].length+1}}function E(t){return t.startIndex+t[1].length}const v={preserveOrder:!1,attributeNamePrefix:"@_",attributesGroupName:!1,textNodeName:"#text",ignoreAttributes:!0,removeNSPrefix:!1,allowBooleanAttributes:!1,parseTagValue:!0,parseAttributeValue:!1,trimValues:!0,cdataPropName:!1,numberParseOptions:{hex:!0,leadingZeros:!0,eNotation:!0},tagValueProcessor:function(t,e){return e},attributeValueProcessor:function(t,e){return e},stopNodes:[],alwaysCreateTextNode:!1,isArray:()=>!1,commentPropName:!1,unpairedTags:[],processEntities:!0,htmlEntities:!1,ignoreDeclaration:!1,ignorePiTags:!1,transformTagName:!1,transformAttributeName:!1,updateTag:function(t,e,n){return t},captureMetaData:!1};let y;y="function"!=typeof Symbol?"@@xmlMetadata":Symbol("XML Node Metadata");class T{constructor(t){this.tagname=t,this.child=[],this[":@"]={}}add(t,e){"__proto__"===t&&(t="#__proto__"),this.child.push({[t]:e})}addChild(t,e){"__proto__"===t.tagname&&(t.tagname="#__proto__"),t[":@"]&&Object.keys(t[":@"]).length>0?this.child.push({[t.tagname]:t.child,":@":t[":@"]}):this.child.push({[t.tagname]:t.child}),void 0!==e&&(this.child[this.child.length-1][y]={startIndex:e})}static getMetaDataSymbol(){return y}}function w(t,e){const n={};if("O"!==t[e+3]||"C"!==t[e+4]||"T"!==t[e+5]||"Y"!==t[e+6]||"P"!==t[e+7]||"E"!==t[e+8])throw new Error("Invalid Tag instead of DOCTYPE");{e+=9;let i=1,s=!1,r=!1,o="";for(;e<t.length;e++)if("<"!==t[e]||r)if(">"===t[e]){if(r?"-"===t[e-1]&&"-"===t[e-2]&&(r=!1,i--):i--,0===i)break}else"["===t[e]?s=!0:o+=t[e];else{if(s&&C(t,"!ENTITY",e)){let i,s;e+=7,[i,s,e]=O(t,e+1),-1===s.indexOf("&")&&(n[i]={regx:RegExp(`&${i};`,"g"),val:s})}else if(s&&C(t,"!ELEMENT",e)){e+=8;const{index:n}=S(t,e+1);e=n}else if(s&&C(t,"!ATTLIST",e))e+=8;else if(s&&C(t,"!NOTATION",e)){e+=9;const{index:n}=A(t,e+1);e=n}else{if(!C(t,"!--",e))throw new Error("Invalid DOCTYPE");r=!0}i++,o=""}if(0!==i)throw new Error("Unclosed DOCTYPE")}return{entities:n,i:e}}const P=(t,e)=>{for(;e<t.length&&/\s/.test(t[e]);)e++;return e};function O(t,e){e=P(t,e);let n="";for(;e<t.length&&!/\s/.test(t[e])&&'"'!==t[e]&&"'"!==t[e];)n+=t[e],e++;if($(n),e=P(t,e),"SYSTEM"===t.substring(e,e+6).toUpperCase())throw new Error("External entities are not supported");if("%"===t[e])throw new Error("Parameter entities are not supported");let i="";return[e,i]=I(t,e,"entity"),[n,i,--e]}function A(t,e){e=P(t,e);let n="";for(;e<t.length&&!/\s/.test(t[e]);)n+=t[e],e++;$(n),e=P(t,e);const i=t.substring(e,e+6).toUpperCase();if("SYSTEM"!==i&&"PUBLIC"!==i)throw new Error(`Expected SYSTEM or PUBLIC, found "${i}"`);e+=i.length,e=P(t,e);let s=null,r=null;if("PUBLIC"===i)[e,s]=I(t,e,"publicIdentifier"),'"'!==t[e=P(t,e)]&&"'"!==t[e]||([e,r]=I(t,e,"systemIdentifier"));else if("SYSTEM"===i&&([e,r]=I(t,e,"systemIdentifier"),!r))throw new Error("Missing mandatory system identifier for SYSTEM notation");return{notationName:n,publicIdentifier:s,systemIdentifier:r,index:--e}}function I(t,e,n){let i="";const s=t[e];if('"'!==s&&"'"!==s)throw new Error(`Expected quoted string, found "${s}"`);for(e++;e<t.length&&t[e]!==s;)i+=t[e],e++;if(t[e]!==s)throw new Error(`Unterminated ${n} value`);return[++e,i]}function S(t,e){e=P(t,e);let n="";for(;e<t.length&&!/\s/.test(t[e]);)n+=t[e],e++;if(!$(n))throw new Error(`Invalid element name: "${n}"`);let i="";if("E"===t[e=P(t,e)]&&C(t,"MPTY",e))e+=4;else if("A"===t[e]&&C(t,"NY",e))e+=2;else{if("("!==t[e])throw new Error(`Invalid Element Expression, found "${t[e]}"`);for(e++;e<t.length&&")"!==t[e];)i+=t[e],e++;if(")"!==t[e])throw new Error("Unterminated content model")}return{elementName:n,contentModel:i.trim(),index:e}}function C(t,e,n){for(let i=0;i<e.length;i++)if(e[i]!==t[n+i+1])return!1;return!0}function $(t){if(r(t))return t;throw new Error(`Invalid entity name ${t}`)}const j=/^[-+]?0x[a-fA-F0-9]+$/,D=/^([\-\+])?(0*)([0-9]*(\.[0-9]*)?)$/,V={hex:!0,leadingZeros:!0,decimalPoint:".",eNotation:!0};const M=/^([-+])?(0*)(\d*(\.\d*)?[eE][-\+]?\d+)$/;function _(t){return"function"==typeof t?t:Array.isArray(t)?e=>{for(const n of t){if("string"==typeof n&&e===n)return!0;if(n instanceof RegExp&&n.test(e))return!0}}:()=>!1}class k{constructor(t){this.options=t,this.currentNode=null,this.tagsNodeStack=[],this.docTypeEntities={},this.lastEntities={apos:{regex:/&(apos|#39|#x27);/g,val:"'"},gt:{regex:/&(gt|#62|#x3E);/g,val:">"},lt:{regex:/&(lt|#60|#x3C);/g,val:"<"},quot:{regex:/&(quot|#34|#x22);/g,val:'"'}},this.ampEntity={regex:/&(amp|#38|#x26);/g,val:"&"},this.htmlEntities={space:{regex:/&(nbsp|#160);/g,val:" "},cent:{regex:/&(cent|#162);/g,val:"¢"},pound:{regex:/&(pound|#163);/g,val:"£"},yen:{regex:/&(yen|#165);/g,val:"¥"},euro:{regex:/&(euro|#8364);/g,val:"€"},copyright:{regex:/&(copy|#169);/g,val:"©"},reg:{regex:/&(reg|#174);/g,val:"®"},inr:{regex:/&(inr|#8377);/g,val:"₹"},num_dec:{regex:/&#([0-9]{1,7});/g,val:(t,e)=>String.fromCodePoint(Number.parseInt(e,10))},num_hex:{regex:/&#x([0-9a-fA-F]{1,6});/g,val:(t,e)=>String.fromCodePoint(Number.parseInt(e,16))}},this.addExternalEntities=F,this.parseXml=X,this.parseTextData=L,this.resolveNameSpace=B,this.buildAttributesMap=G,this.isItStopNode=Z,this.replaceEntitiesValue=R,this.readStopNodeData=J,this.saveTextToParentTag=q,this.addChild=Y,this.ignoreAttributesFn=_(this.options.ignoreAttributes)}}function F(t){const e=Object.keys(t);for(let n=0;n<e.length;n++){const i=e[n];this.lastEntities[i]={regex:new RegExp("&"+i+";","g"),val:t[i]}}}function L(t,e,n,i,s,r,o){if(void 0!==t&&(this.options.trimValues&&!i&&(t=t.trim()),t.length>0)){o||(t=this.replaceEntitiesValue(t));const i=this.options.tagValueProcessor(e,t,n,s,r);return null==i?t:typeof i!=typeof t||i!==t?i:this.options.trimValues||t.trim()===t?H(t,this.options.parseTagValue,this.options.numberParseOptions):t}}function B(t){if(this.options.removeNSPrefix){const e=t.split(":"),n="/"===t.charAt(0)?"/":"";if("xmlns"===e[0])return"";2===e.length&&(t=n+e[1])}return t}const U=new RegExp("([^\\s=]+)\\s*(=\\s*(['\"])([\\s\\S]*?)\\3)?","gm");function G(t,e,n){if(!0!==this.options.ignoreAttributes&&"string"==typeof t){const n=s(t,U),i=n.length,r={};for(let t=0;t<i;t++){const i=this.resolveNameSpace(n[t][1]);if(this.ignoreAttributesFn(i,e))continue;let s=n[t][4],o=this.options.attributeNamePrefix+i;if(i.length)if(this.options.transformAttributeName&&(o=this.options.transformAttributeName(o)),"__proto__"===o&&(o="#__proto__"),void 0!==s){this.options.trimValues&&(s=s.trim()),s=this.replaceEntitiesValue(s);const t=this.options.attributeValueProcessor(i,s,e);r[o]=null==t?s:typeof t!=typeof s||t!==s?t:H(s,this.options.parseAttributeValue,this.options.numberParseOptions)}else this.options.allowBooleanAttributes&&(r[o]=!0)}if(!Object.keys(r).length)return;if(this.options.attributesGroupName){const t={};return t[this.options.attributesGroupName]=r,t}return r}}const X=function(t){t=t.replace(/\r\n?/g,"\n");const e=new T("!xml");let n=e,i="",s="";for(let r=0;r<t.length;r++)if("<"===t[r])if("/"===t[r+1]){const e=W(t,">",r,"Closing Tag is not closed.");let o=t.substring(r+2,e).trim();if(this.options.removeNSPrefix){const t=o.indexOf(":");-1!==t&&(o=o.substr(t+1))}this.options.transformTagName&&(o=this.options.transformTagName(o)),n&&(i=this.saveTextToParentTag(i,n,s));const a=s.substring(s.lastIndexOf(".")+1);if(o&&-1!==this.options.unpairedTags.indexOf(o))throw new Error(`Unpaired tag can not be used as closing tag: </${o}>`);let l=0;a&&-1!==this.options.unpairedTags.indexOf(a)?(l=s.lastIndexOf(".",s.lastIndexOf(".")-1),this.tagsNodeStack.pop()):l=s.lastIndexOf("."),s=s.substring(0,l),n=this.tagsNodeStack.pop(),i="",r=e}else if("?"===t[r+1]){let e=z(t,r,!1,"?>");if(!e)throw new Error("Pi Tag is not closed.");if(i=this.saveTextToParentTag(i,n,s),this.options.ignoreDeclaration&&"?xml"===e.tagName||this.options.ignorePiTags);else{const t=new T(e.tagName);t.add(this.options.textNodeName,""),e.tagName!==e.tagExp&&e.attrExpPresent&&(t[":@"]=this.buildAttributesMap(e.tagExp,s,e.tagName)),this.addChild(n,t,s,r)}r=e.closeIndex+1}else if("!--"===t.substr(r+1,3)){const e=W(t,"--\x3e",r+4,"Comment is not closed.");if(this.options.commentPropName){const o=t.substring(r+4,e-2);i=this.saveTextToParentTag(i,n,s),n.add(this.options.commentPropName,[{[this.options.textNodeName]:o}])}r=e}else if("!D"===t.substr(r+1,2)){const e=w(t,r);this.docTypeEntities=e.entities,r=e.i}else if("!["===t.substr(r+1,2)){const e=W(t,"]]>",r,"CDATA is not closed.")-2,o=t.substring(r+9,e);i=this.saveTextToParentTag(i,n,s);let a=this.parseTextData(o,n.tagname,s,!0,!1,!0,!0);null==a&&(a=""),this.options.cdataPropName?n.add(this.options.cdataPropName,[{[this.options.textNodeName]:o}]):n.add(this.options.textNodeName,a),r=e+2}else{let o=z(t,r,this.options.removeNSPrefix),a=o.tagName;const l=o.rawTagName;let u=o.tagExp,h=o.attrExpPresent,d=o.closeIndex;this.options.transformTagName&&(a=this.options.transformTagName(a)),n&&i&&"!xml"!==n.tagname&&(i=this.saveTextToParentTag(i,n,s,!1));const f=n;f&&-1!==this.options.unpairedTags.indexOf(f.tagname)&&(n=this.tagsNodeStack.pop(),s=s.substring(0,s.lastIndexOf("."))),a!==e.tagname&&(s+=s?"."+a:a);const c=r;if(this.isItStopNode(this.options.stopNodes,s,a)){let e="";if(u.length>0&&u.lastIndexOf("/")===u.length-1)"/"===a[a.length-1]?(a=a.substr(0,a.length-1),s=s.substr(0,s.length-1),u=a):u=u.substr(0,u.length-1),r=o.closeIndex;else if(-1!==this.options.unpairedTags.indexOf(a))r=o.closeIndex;else{const n=this.readStopNodeData(t,l,d+1);if(!n)throw new Error(`Unexpected end of ${l}`);r=n.i,e=n.tagContent}const i=new T(a);a!==u&&h&&(i[":@"]=this.buildAttributesMap(u,s,a)),e&&(e=this.parseTextData(e,a,s,!0,h,!0,!0)),s=s.substr(0,s.lastIndexOf(".")),i.add(this.options.textNodeName,e),this.addChild(n,i,s,c)}else{if(u.length>0&&u.lastIndexOf("/")===u.length-1){"/"===a[a.length-1]?(a=a.substr(0,a.length-1),s=s.substr(0,s.length-1),u=a):u=u.substr(0,u.length-1),this.options.transformTagName&&(a=this.options.transformTagName(a));const t=new T(a);a!==u&&h&&(t[":@"]=this.buildAttributesMap(u,s,a)),this.addChild(n,t,s,c),s=s.substr(0,s.lastIndexOf("."))}else{const t=new T(a);this.tagsNodeStack.push(n),a!==u&&h&&(t[":@"]=this.buildAttributesMap(u,s,a)),this.addChild(n,t,s,c),n=t}i="",r=d}}else i+=t[r];return e.child};function Y(t,e,n,i){this.options.captureMetaData||(i=void 0);const s=this.options.updateTag(e.tagname,n,e[":@"]);!1===s||("string"==typeof s?(e.tagname=s,t.addChild(e,i)):t.addChild(e,i))}const R=function(t){if(this.options.processEntities){for(let e in this.docTypeEntities){const n=this.docTypeEntities[e];t=t.replace(n.regx,n.val)}for(let e in this.lastEntities){const n=this.lastEntities[e];t=t.replace(n.regex,n.val)}if(this.options.htmlEntities)for(let e in this.htmlEntities){const n=this.htmlEntities[e];t=t.replace(n.regex,n.val)}t=t.replace(this.ampEntity.regex,this.ampEntity.val)}return t};function q(t,e,n,i){return t&&(void 0===i&&(i=0===e.child.length),void 0!==(t=this.parseTextData(t,e.tagname,n,!1,!!e[":@"]&&0!==Object.keys(e[":@"]).length,i))&&""!==t&&e.add(this.options.textNodeName,t),t=""),t}function Z(t,e,n){const i="*."+n;for(const n in t){const s=t[n];if(i===s||e===s)return!0}return!1}function W(t,e,n,i){const s=t.indexOf(e,n);if(-1===s)throw new Error(i);return s+e.length-1}function z(t,e,n,i=">"){const s=function(t,e,n=">"){let i,s="";for(let r=e;r<t.length;r++){let e=t[r];if(i)e===i&&(i="");else if('"'===e||"'"===e)i=e;else if(e===n[0]){if(!n[1])return{data:s,index:r};if(t[r+1]===n[1])return{data:s,index:r}}else"\t"===e&&(e=" ");s+=e}}(t,e+1,i);if(!s)return;let r=s.data;const o=s.index,a=r.search(/\s/);let l=r,u=!0;-1!==a&&(l=r.substring(0,a),r=r.substring(a+1).trimStart());const h=l;if(n){const t=l.indexOf(":");-1!==t&&(l=l.substr(t+1),u=l!==s.data.substr(t+1))}return{tagName:l,tagExp:r,closeIndex:o,attrExpPresent:u,rawTagName:h}}function J(t,e,n){const i=n;let s=1;for(;n<t.length;n++)if("<"===t[n])if("/"===t[n+1]){const r=W(t,">",n,`${e} is not closed`);if(t.substring(n+2,r).trim()===e&&(s--,0===s))return{tagContent:t.substring(i,n),i:r};n=r}else if("?"===t[n+1])n=W(t,"?>",n+1,"StopNode is not closed.");else if("!--"===t.substr(n+1,3))n=W(t,"--\x3e",n+3,"StopNode is not closed.");else if("!["===t.substr(n+1,2))n=W(t,"]]>",n,"StopNode is not closed.")-2;else{const i=z(t,n,">");i&&((i&&i.tagName)===e&&"/"!==i.tagExp[i.tagExp.length-1]&&s++,n=i.closeIndex)}}function H(t,e,n){if(e&&"string"==typeof t){const e=t.trim();return"true"===e||"false"!==e&&function(t,e={}){if(e=Object.assign({},V,e),!t||"string"!=typeof t)return t;let n=t.trim();if(void 0!==e.skipLike&&e.skipLike.test(n))return t;if("0"===t)return 0;if(e.hex&&j.test(n))return function(t){if(parseInt)return parseInt(t,16);if(Number.parseInt)return Number.parseInt(t,16);if(window&&window.parseInt)return window.parseInt(t,16);throw new Error("parseInt, Number.parseInt, window.parseInt are not supported")}(n);if(-1!==n.search(/.+[eE].+/))return function(t,e,n){if(!n.eNotation)return t;const i=e.match(M);if(i){let s=i[1]||"";const r=-1===i[3].indexOf("e")?"E":"e",o=i[2],a=s?t[o.length+1]===r:t[o.length]===r;return o.length>1&&a?t:1!==o.length||!i[3].startsWith(`.${r}`)&&i[3][0]!==r?n.leadingZeros&&!a?(e=(i[1]||"")+i[3],Number(e)):t:Number(e)}return t}(t,n,e);{const s=D.exec(n);if(s){const r=s[1]||"",o=s[2];let a=(i=s[3])&&-1!==i.indexOf(".")?("."===(i=i.replace(/0+$/,""))?i="0":"."===i[0]?i="0"+i:"."===i[i.length-1]&&(i=i.substring(0,i.length-1)),i):i;const l=r?"."===t[o.length+1]:"."===t[o.length];if(!e.leadingZeros&&(o.length>1||1===o.length&&!l))return t;{const i=Number(n),s=String(i);if(0===i||-0===i)return i;if(-1!==s.search(/[eE]/))return e.eNotation?i:t;if(-1!==n.indexOf("."))return"0"===s||s===a||s===`${r}${a}`?i:t;let l=o?a:n;return o?l===s||r+l===s?i:t:l===s||l===r+s?i:t}}return t}var i}(t,n)}return void 0!==t?t:""}const K=T.getMetaDataSymbol();function Q(t,e){return tt(t,e)}function tt(t,e,n){let i;const s={};for(let r=0;r<t.length;r++){const o=t[r],a=et(o);let l="";if(l=void 0===n?a:n+"."+a,a===e.textNodeName)void 0===i?i=o[a]:i+=""+o[a];else{if(void 0===a)continue;if(o[a]){let t=tt(o[a],e,l);const n=it(t,e);void 0!==o[K]&&(t[K]=o[K]),o[":@"]?nt(t,o[":@"],l,e):1!==Object.keys(t).length||void 0===t[e.textNodeName]||e.alwaysCreateTextNode?0===Object.keys(t).length&&(e.alwaysCreateTextNode?t[e.textNodeName]="":t=""):t=t[e.textNodeName],void 0!==s[a]&&s.hasOwnProperty(a)?(Array.isArray(s[a])||(s[a]=[s[a]]),s[a].push(t)):e.isArray(a,l,n)?s[a]=[t]:s[a]=t}}}return"string"==typeof i?i.length>0&&(s[e.textNodeName]=i):void 0!==i&&(s[e.textNodeName]=i),s}function et(t){const e=Object.keys(t);for(let t=0;t<e.length;t++){const n=e[t];if(":@"!==n)return n}}function nt(t,e,n,i){if(e){const s=Object.keys(e),r=s.length;for(let o=0;o<r;o++){const r=s[o];i.isArray(r,n+"."+r,!0,!0)?t[r]=[e[r]]:t[r]=e[r]}}}function it(t,e){const{textNodeName:n}=e,i=Object.keys(t).length;return 0===i||!(1!==i||!t[n]&&"boolean"!=typeof t[n]&&0!==t[n])}class st{constructor(t){this.externalEntities={},this.options=function(t){return Object.assign({},v,t)}(t)}parse(t,e){if("string"==typeof t);else{if(!t.toString)throw new Error("XML data is accepted in String or Bytes[] form.");t=t.toString()}if(e){!0===e&&(e={});const n=a(t,e);if(!0!==n)throw Error(`${n.err.msg}:${n.err.line}:${n.err.col}`)}const n=new k(this.options);n.addExternalEntities(this.externalEntities);const i=n.parseXml(t);return this.options.preserveOrder||void 0===i?i:Q(i,this.options)}addEntity(t,e){if(-1!==e.indexOf("&"))throw new Error("Entity value can't have '&'");if(-1!==t.indexOf("&")||-1!==t.indexOf(";"))throw new Error("An entity must be set without '&' and ';'. Eg. use '#xD' for '&#xD;'");if("&"===e)throw new Error("An entity with value '&' is not permitted");this.externalEntities[t]=e}static getMetaDataSymbol(){return T.getMetaDataSymbol()}}function rt(t,e){let n="";return e.format&&e.indentBy.length>0&&(n="\n"),ot(t,e,"",n)}function ot(t,e,n,i){let s="",r=!1;for(let o=0;o<t.length;o++){const a=t[o],l=at(a);if(void 0===l)continue;let u="";if(u=0===n.length?l:`${n}.${l}`,l===e.textNodeName){let t=a[l];ut(u,e)||(t=e.tagValueProcessor(l,t),t=ht(t,e)),r&&(s+=i),s+=t,r=!1;continue}if(l===e.cdataPropName){r&&(s+=i),s+=`<![CDATA[${a[l][0][e.textNodeName]}]]>`,r=!1;continue}if(l===e.commentPropName){s+=i+`\x3c!--${a[l][0][e.textNodeName]}--\x3e`,r=!0;continue}if("?"===l[0]){const t=lt(a[":@"],e),n="?xml"===l?"":i;let o=a[l][0][e.textNodeName];o=0!==o.length?" "+o:"",s+=n+`<${l}${o}${t}?>`,r=!0;continue}let h=i;""!==h&&(h+=e.indentBy);const d=i+`<${l}${lt(a[":@"],e)}`,f=ot(a[l],e,u,h);-1!==e.unpairedTags.indexOf(l)?e.suppressUnpairedNode?s+=d+">":s+=d+"/>":f&&0!==f.length||!e.suppressEmptyNode?f&&f.endsWith(">")?s+=d+`>${f}${i}</${l}>`:(s+=d+">",f&&""!==i&&(f.includes("/>")||f.includes("</"))?s+=i+e.indentBy+f+i:s+=f,s+=`</${l}>`):s+=d+"/>",r=!0}return s}function at(t){const e=Object.keys(t);for(let n=0;n<e.length;n++){const i=e[n];if(t.hasOwnProperty(i)&&":@"!==i)return i}}function lt(t,e){let n="";if(t&&!e.ignoreAttributes)for(let i in t){if(!t.hasOwnProperty(i))continue;let s=e.attributeValueProcessor(i,t[i]);s=ht(s,e),!0===s&&e.suppressBooleanAttributes?n+=` ${i.substr(e.attributeNamePrefix.length)}`:n+=` ${i.substr(e.attributeNamePrefix.length)}="${s}"`}return n}function ut(t,e){let n=(t=t.substr(0,t.length-e.textNodeName.length-1)).substr(t.lastIndexOf(".")+1);for(let i in e.stopNodes)if(e.stopNodes[i]===t||e.stopNodes[i]==="*."+n)return!0;return!1}function ht(t,e){if(t&&t.length>0&&e.processEntities)for(let n=0;n<e.entities.length;n++){const i=e.entities[n];t=t.replace(i.regex,i.val)}return t}const dt={attributeNamePrefix:"@_",attributesGroupName:!1,textNodeName:"#text",ignoreAttributes:!0,cdataPropName:!1,format:!1,indentBy:"  ",suppressEmptyNode:!1,suppressUnpairedNode:!0,suppressBooleanAttributes:!0,tagValueProcessor:function(t,e){return e},attributeValueProcessor:function(t,e){return e},preserveOrder:!1,commentPropName:!1,unpairedTags:[],entities:[{regex:new RegExp("&","g"),val:"&amp;"},{regex:new RegExp(">","g"),val:"&gt;"},{regex:new RegExp("<","g"),val:"&lt;"},{regex:new RegExp("'","g"),val:"&apos;"},{regex:new RegExp('"',"g"),val:"&quot;"}],processEntities:!0,stopNodes:[],oneListGroup:!1};function ft(t){this.options=Object.assign({},dt,t),!0===this.options.ignoreAttributes||this.options.attributesGroupName?this.isAttribute=function(){return!1}:(this.ignoreAttributesFn=_(this.options.ignoreAttributes),this.attrPrefixLen=this.options.attributeNamePrefix.length,this.isAttribute=gt),this.processTextOrObjNode=ct,this.options.format?(this.indentate=pt,this.tagEndChar=">\n",this.newLine="\n"):(this.indentate=function(){return""},this.tagEndChar=">",this.newLine="")}function ct(t,e,n,i){const s=this.j2x(t,n+1,i.concat(e));return void 0!==t[this.options.textNodeName]&&1===Object.keys(t).length?this.buildTextValNode(t[this.options.textNodeName],e,s.attrStr,n):this.buildObjectNode(s.val,e,s.attrStr,n)}function pt(t){return this.options.indentBy.repeat(t)}function gt(t){return!(!t.startsWith(this.options.attributeNamePrefix)||t===this.options.textNodeName)&&t.substr(this.attrPrefixLen)}ft.prototype.build=function(t){return this.options.preserveOrder?rt(t,this.options):(Array.isArray(t)&&this.options.arrayNodeName&&this.options.arrayNodeName.length>1&&(t={[this.options.arrayNodeName]:t}),this.j2x(t,0,[]).val)},ft.prototype.j2x=function(t,e,n){let i="",s="";const r=n.join(".");for(let o in t)if(Object.prototype.hasOwnProperty.call(t,o))if(void 0===t[o])this.isAttribute(o)&&(s+="");else if(null===t[o])this.isAttribute(o)||o===this.options.cdataPropName?s+="":"?"===o[0]?s+=this.indentate(e)+"<"+o+"?"+this.tagEndChar:s+=this.indentate(e)+"<"+o+"/"+this.tagEndChar;else if(t[o]instanceof Date)s+=this.buildTextValNode(t[o],o,"",e);else if("object"!=typeof t[o]){const n=this.isAttribute(o);if(n&&!this.ignoreAttributesFn(n,r))i+=this.buildAttrPairStr(n,""+t[o]);else if(!n)if(o===this.options.textNodeName){let e=this.options.tagValueProcessor(o,""+t[o]);s+=this.replaceEntitiesValue(e)}else s+=this.buildTextValNode(t[o],o,"",e)}else if(Array.isArray(t[o])){const i=t[o].length;let r="",a="";for(let l=0;l<i;l++){const i=t[o][l];if(void 0===i);else if(null===i)"?"===o[0]?s+=this.indentate(e)+"<"+o+"?"+this.tagEndChar:s+=this.indentate(e)+"<"+o+"/"+this.tagEndChar;else if("object"==typeof i)if(this.options.oneListGroup){const t=this.j2x(i,e+1,n.concat(o));r+=t.val,this.options.attributesGroupName&&i.hasOwnProperty(this.options.attributesGroupName)&&(a+=t.attrStr)}else r+=this.processTextOrObjNode(i,o,e,n);else if(this.options.oneListGroup){let t=this.options.tagValueProcessor(o,i);t=this.replaceEntitiesValue(t),r+=t}else r+=this.buildTextValNode(i,o,"",e)}this.options.oneListGroup&&(r=this.buildObjectNode(r,o,a,e)),s+=r}else if(this.options.attributesGroupName&&o===this.options.attributesGroupName){const e=Object.keys(t[o]),n=e.length;for(let s=0;s<n;s++)i+=this.buildAttrPairStr(e[s],""+t[o][e[s]])}else s+=this.processTextOrObjNode(t[o],o,e,n);return{attrStr:i,val:s}},ft.prototype.buildAttrPairStr=function(t,e){return e=this.options.attributeValueProcessor(t,""+e),e=this.replaceEntitiesValue(e),this.options.suppressBooleanAttributes&&"true"===e?" "+t:" "+t+'="'+e+'"'},ft.prototype.buildObjectNode=function(t,e,n,i){if(""===t)return"?"===e[0]?this.indentate(i)+"<"+e+n+"?"+this.tagEndChar:this.indentate(i)+"<"+e+n+this.closeTag(e)+this.tagEndChar;{let s="</"+e+this.tagEndChar,r="";return"?"===e[0]&&(r="?",s=""),!n&&""!==n||-1!==t.indexOf("<")?!1!==this.options.commentPropName&&e===this.options.commentPropName&&0===r.length?this.indentate(i)+`\x3c!--${t}--\x3e`+this.newLine:this.indentate(i)+"<"+e+n+r+this.tagEndChar+t+this.indentate(i)+s:this.indentate(i)+"<"+e+n+r+">"+t+s}},ft.prototype.closeTag=function(t){let e="";return-1!==this.options.unpairedTags.indexOf(t)?this.options.suppressUnpairedNode||(e="/"):e=this.options.suppressEmptyNode?"/":`></${t}`,e},ft.prototype.buildTextValNode=function(t,e,n,i){if(!1!==this.options.cdataPropName&&e===this.options.cdataPropName)return this.indentate(i)+`<![CDATA[${t}]]>`+this.newLine;if(!1!==this.options.commentPropName&&e===this.options.commentPropName)return this.indentate(i)+`\x3c!--${t}--\x3e`+this.newLine;if("?"===e[0])return this.indentate(i)+"<"+e+n+"?"+this.tagEndChar;{let s=this.options.tagValueProcessor(e,t);return s=this.replaceEntitiesValue(s),""===s?this.indentate(i)+"<"+e+n+this.closeTag(e)+this.tagEndChar:this.indentate(i)+"<"+e+n+">"+s+"</"+e+this.tagEndChar}},ft.prototype.replaceEntitiesValue=function(t){if(t&&t.length>0&&this.options.processEntities)for(let e=0;e<this.options.entities.length;e++){const n=this.options.entities[e];t=t.replace(n.regex,n.val)}return t};const mt={validate:a};module.exports=e})();
+
 /***/ })
 
 /******/ 	});
@@ -30051,81 +30443,22 @@ const glob = __nccwpck_require__(8090);
 const path = __nccwpck_require__(1017);
 const fs = __nccwpck_require__(7147);
 const exec_1 = __nccwpck_require__(1514);
+const inputs_1 = __nccwpck_require__(7063);
 const main = async () => {
     try {
         if (process.platform !== `win32`) {
             throw new Error(`This action can only be performed on a Windows runner.`);
         }
-        let projectPath = core.getInput(`project-path`, { required: true });
-        core.info(`project-path: "${projectPath}"`);
-        if (!projectPath.endsWith(`.sln`)) {
-            projectPath = path.join(projectPath, `**/*.sln`);
-        }
-        let solution = projectPath;
-        if (projectPath.includes('*')) {
-            const globber = await glob.create(projectPath, { matchDirectories: false });
-            const files = await globber.glob();
-            core.startGroup(`Found solution files:`);
-            files.forEach(file => core.info(`  - "${file}"`));
-            core.endGroup();
-            if (files.length === 0) {
-                throw new Error(`No solution file found.`);
-            }
-            solution = files[0];
-        }
-        core.info(`Building ${solution}...`);
-        projectPath = path.dirname(solution);
-        try {
-            await fs.promises.access(solution, fs.constants.R_OK);
-        }
-        catch (error) {
-            throw new Error(`Solution file not found: "${solution}"`);
-        }
-        const appPackagesPath = path.join(projectPath, `AppPackages`);
-        if (fs.existsSync(appPackagesPath)) {
-            core.info(`Cleaning AppPackages directory: ${appPackagesPath}...`);
-            await fs.promises.rm(appPackagesPath, { recursive: true, force: true });
-        }
-        const vcxprojGlobber = await glob.create(path.join(projectPath, '**/*.vcxproj'), { matchDirectories: false });
-        const vcxprojFiles = await vcxprojGlobber.glob();
-        if (vcxprojFiles.length === 0) {
-            throw new Error(`No VCXProj file found in: "${projectPath}"`);
-        }
-        core.startGroup(`Found VCXProj files:`);
-        vcxprojFiles.forEach(file => core.info(`  - "${file}"`));
-        core.endGroup();
-        let vcxprojPath = null;
-        for (const file of vcxprojFiles) {
-            if (!path.basename(file).includes('Il2CppOutputProject')) {
-                vcxprojPath = file;
-                break;
-            }
-        }
-        if (!vcxprojPath) {
-            throw new Error(`No suitable VCXProj file found that does not contain 'Il2CppOutputProject'.`);
-        }
-        core.info(`Using VCXProj: ${vcxprojPath}`);
-        await fs.promises.access(vcxprojPath, fs.constants.R_OK);
-        const stat = await fs.promises.stat(vcxprojPath);
-        if (!stat.isFile()) {
-            throw new Error(`VCXProj file not found or is not a valid file: "${vcxprojPath}"`);
-        }
-        const configuration = core.getInput(`configuration`, { required: true });
-        core.info(`configuration: "${configuration}"`);
+        const project = await (0, inputs_1.getUwpProjectInputs)();
         const buildArgs = [
             `/t:Build`,
             `/p:AppxBundle=Always`,
-            `/p:Configuration=${configuration}`,
+            `/p:Configuration=${project.configuration}`,
         ];
-        const platform = core.getInput(`platform`);
-        if (platform) {
-            core.info(`platform: "${platform}"`);
-            buildArgs.push(`/p:Platform=${platform}`);
+        if (project.buildPlatform.length > 0) {
+            buildArgs.push(`/p:Platform=${project.buildPlatform.join('|')}`);
         }
-        const packageType = core.getInput(`package-type`, { required: true });
-        core.info(`package-type: "${packageType}"`);
-        const certificatePath = await getCertificatePath(projectPath);
-        switch (packageType) {
+        switch (project.packageType) {
             case `upload`:
                 buildArgs.push(`/p:UapAppxPackageBuildMode=StoreUpload`);
                 break;
@@ -30133,53 +30466,20 @@ const main = async () => {
                 buildArgs.push(`/p:UapAppxPackageBuildMode=SideloadOnly`);
                 break;
             default:
-                throw new Error(`Invalid package type: "${packageType}"`);
+                throw new Error(`Invalid package type: "${project.packageType}"`);
         }
-        buildArgs.push(`/p:GenerateTestCertificate=false`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
-        const certificatePassword = core.getInput(`certificate-password`);
-        if (certificatePassword) {
-            buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
+        buildArgs.push(`/p:PackageCertificateKeyFile="${project.certificatePath}"`);
+        if (project.certificatePassword) {
+            buildArgs.push(`/p:PackageCertificateThumbprint=""`, `/p:PackageCertificatePassword="${project.certificatePassword}"`);
         }
+        buildArgs.push(`/p:AppxBundleOutput="${project.outputDirectory}"`);
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.info(`additional-args: "${additionalArgs}"`);
             buildArgs.push(...additionalArgs);
         }
-        const storeAssociationPath = core.getInput('store-association-path');
-        if (storeAssociationPath) {
-            core.info(`store-association-path: "${storeAssociationPath}"`);
-            await copyAndEnsureStoreAssociation(vcxprojPath, storeAssociationPath);
-        }
-        const specifiedSDKVersion = core.getInput(`windows-sdk-version`);
-        let windowsSDKVersion = null;
-        if (specifiedSDKVersion) {
-            if (await isWindowsSDKVersionAvailable(specifiedSDKVersion)) {
-                windowsSDKVersion = specifiedSDKVersion;
-                core.info(`Using specified Windows SDK version: ${windowsSDKVersion}`);
-            }
-            else {
-                core.warning(`Specified Windows SDK version ${specifiedSDKVersion} not found. Falling back to auto-detection.`);
-                windowsSDKVersion = await getAvailableWindowsSDKVersion();
-            }
-        }
-        else {
-            windowsSDKVersion = await getAvailableWindowsSDKVersion();
-        }
-        if (windowsSDKVersion) {
-            if (!specifiedSDKVersion) {
-                core.info(`Auto-detected Windows SDK version: ${windowsSDKVersion}`);
-            }
-            buildArgs.push(`/p:WindowsTargetPlatformVersion=${windowsSDKVersion}`);
-        }
-        if (windowsSDKVersion) {
-            const match = windowsSDKVersion.match(/^10\.0\.(\d+)\.\d+$/);
-            if (match && parseInt(match[1], 10) >= 26100) {
-                core.startGroup('Removing WindowsMobile SDKReference from all VCXProj files...');
-                for (const file of vcxprojFiles) {
-                    await removeWindowsMobileSDKReference(file);
-                }
-                core.endGroup();
-            }
+        if (project.windowsSdkVersion) {
+            buildArgs.push(`/p:WindowsTargetPlatformVersion=${project.windowsSdkVersion}`);
         }
         if (!core.isDebug()) {
             buildArgs.push(`/verbosity:minimal`);
@@ -30189,18 +30489,18 @@ const main = async () => {
         core.endGroup();
         core.startGroup(`MSBuild`);
         try {
-            await (0, exec_1.exec)(`msbuild`, [`"${solution}"`, ...buildArgs], {
+            await (0, exec_1.exec)(`msbuild`, [`"${project.projectSolutionPath}"`, ...buildArgs], {
                 windowsVerbatimArguments: true
             });
         }
         finally {
             core.endGroup();
         }
-        const appPackagesGlobber = await glob.create(path.join(projectPath, `**`, `*`), { matchDirectories: true });
+        const appPackagesGlobber = await glob.create(path.join(project.outputDirectory, `**`, `*`), { matchDirectories: true });
         const appPackagesGlobs = await appPackagesGlobber.glob();
         const outputDirectory = appPackagesGlobs.find(glob => glob.includes(`AppPackages`));
         if (!outputDirectory) {
-            throw new Error(`AppPackages directory not found.`);
+            throw new Error(`output directory AppPackages directory not found.`);
         }
         try {
             await fs.promises.access(outputDirectory, fs.constants.R_OK);
@@ -30230,258 +30530,6 @@ const main = async () => {
     }
 };
 main();
-async function getCertificatePath(projectPath) {
-    let certificatePath = core.getInput(`certificate-path`);
-    if (!certificatePath || certificatePath.trim() === ``) {
-        certificatePath = `${projectPath}/**/*.pfx`;
-    }
-    core.info(`certificatePath: "${certificatePath}"`);
-    if (!certificatePath.endsWith(`.pfx`)) {
-        certificatePath = path.join(certificatePath, `**/*.pfx`);
-    }
-    if (certificatePath.includes(`*`)) {
-        const certificateGlobber = await glob.create(certificatePath);
-        const certificateFiles = await certificateGlobber.glob();
-        core.info(`Found certificate files:`);
-        certificateFiles.forEach(file => core.info(`  - "${file}"`));
-        if (certificateFiles.length === 0) {
-            throw new Error(`No certificate file found: "${certificatePath}". Make sure Unity generated a test certificate or provide a custom certificate path.`);
-        }
-        const unityCertificate = certificateFiles.find(file => file.includes('_TemporaryKey.pfx') || file.includes('TestCertificate.pfx'));
-        certificatePath = unityCertificate || certificateFiles[0];
-    }
-    try {
-        await fs.promises.access(certificatePath, fs.constants.R_OK);
-        const stat = await fs.promises.stat(certificatePath);
-        if (!stat.isFile()) {
-            throw new Error(`Certificate path is not a valid file: "${certificatePath}"`);
-        }
-    }
-    catch (error) {
-        throw new Error(`Certificate file not found: "${certificatePath}". Make sure the certificate exists and is readable.`);
-    }
-    core.info(`Using certificate: ${certificatePath}`);
-    return certificatePath;
-}
-async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
-    const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
-    await fs.promises.copyFile(sourcePath, packageStoreAssociationFilePath);
-    let vcxprojFileContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-    let hasStoreAssociationFile = false;
-    if (!vcxprojFileContent.includes('Package.StoreAssociation.xml')) {
-        const itemGroupRegex = /<ItemGroup>([\s\S]*?)<\/ItemGroup>/g;
-        let itemGroupMatch = null;
-        while ((itemGroupMatch = itemGroupRegex.exec(vcxprojFileContent)) !== null) {
-            if (itemGroupMatch[1].includes('StoreAssociationFile')) {
-                hasStoreAssociationFile = true;
-                break;
-            }
-        }
-    }
-    if (!hasStoreAssociationFile) {
-        core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
-        const itemGroup = `  <ItemGroup>
-    <None Include="Package.StoreAssociation.xml" />
-  </ItemGroup>`;
-        vcxprojFileContent = vcxprojFileContent.replace('</Project>', `${itemGroup}</Project>`);
-        await fs.promises.writeFile(vcxprojPath, vcxprojFileContent, 'utf8');
-        core.info(`Updated ${vcxprojPath} to include StoreAssociationFile reference.`);
-    }
-    const appxManifestPath = path.join(path.dirname(vcxprojPath), 'Package.appxmanifest');
-    try {
-        const storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
-        const nameMatch = /<MainPackageIdentityName>([^<]+)<\/MainPackageIdentityName>/.exec(storeAssociationContent);
-        const publisherMatch = /<Publisher>([^<]+)<\/Publisher>/.exec(storeAssociationContent);
-        let reservedNameMatch = null;
-        const reservedNamesBlock = /<ReservedNames>([\s\S]*?)<\/ReservedNames>/.exec(storeAssociationContent);
-        if (reservedNamesBlock) {
-            reservedNameMatch = /<ReservedName>([^<]+)<\/ReservedName>/.exec(reservedNamesBlock[1]);
-        }
-        const displayNameMatch = /<DisplayName>([^<]+)<\/DisplayName>/.exec(storeAssociationContent);
-        if (nameMatch && publisherMatch) {
-            const name = nameMatch[1];
-            const publisher = publisherMatch[1];
-            const displayName = reservedNameMatch ? reservedNameMatch[1] : (displayNameMatch ? displayNameMatch[1] : name);
-            let appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
-            appxManifestContent = appxManifestContent.replace(/<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/, (match, oldName, oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`);
-            appxManifestContent = appxManifestContent.replace(/(<Properties[\s\S]*?<DisplayName>)([\s\S]*?)(<\/DisplayName>)/, (match, before, _oldDisplayName, after) => `${before}${displayName}${after}`);
-            await fs.promises.writeFile(appxManifestPath, appxManifestContent, 'utf8');
-            core.info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
-            core.info(`Updated Package.appxmanifest DisplayName to: ${displayName}`);
-        }
-        else {
-            core.warning(`Could not find MainPackageIdentityName or Publisher in StoreAssociationFile.`);
-        }
-    }
-    catch (error) {
-        throw new Error(`Failed to copy StoreAssociationFile:\n${error}`);
-    }
-    try {
-        const appxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
-        const identityRegex = /<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/;
-        const match = identityRegex.exec(appxManifestContent);
-        if (match) {
-            const version = match[3];
-            let storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
-            storeAssociationContent = storeAssociationContent.replace(/<PackageMaxArchitectureVersion>[^<]+<\/PackageMaxArchitectureVersion>/g, `<PackageMaxArchitectureVersion>${version}<\/PackageMaxArchitectureVersion>`);
-            await fs.promises.writeFile(packageStoreAssociationFilePath, storeAssociationContent, 'utf8');
-            core.info(`Updated all PackageMaxArchitectureVersion tags in ${packageStoreAssociationFilePath} with Version from Package.appxmanifest.`);
-        }
-        else {
-            core.warning(`No Identity found in Package.appxmanifest.`);
-        }
-    }
-    catch (error) {
-        throw new Error(`Failed to update StoreAssociationFile with Version from Package.appxmanifest:\n${error}`);
-    }
-    try {
-        const storeAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
-        const archRegex = /<PackageArchitecture>([^<]+)<\/PackageArchitecture>/gi;
-        const architectures = [];
-        let archMatch;
-        while ((archMatch = archRegex.exec(storeAssociationContent)) !== null) {
-            architectures.push(archMatch[1]);
-        }
-        if (architectures.length > 0) {
-            const archMap = {
-                'x86': 'x86',
-                'x64': 'x64',
-                'arm': 'ARM',
-                'arm64': 'ARM64',
-                'X86': 'x86',
-                'X64': 'x64',
-                'Arm': 'ARM',
-                'Arm64': 'ARM64',
-            };
-            const msbuildArchs = architectures.map(a => archMap[a] || a).filter((v, i, arr) => arr.indexOf(v) === i);
-            const appxBundlePlatformsValue = msbuildArchs.join('|');
-            let vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-            if (vcxprojContent.includes('<AppxBundlePlatforms>')) {
-                vcxprojContent = vcxprojContent.replace(/<AppxBundlePlatforms>[^<]+<\/AppxBundlePlatforms>/, `<AppxBundlePlatforms>${appxBundlePlatformsValue}<\/AppxBundlePlatforms>`);
-            }
-            else {
-                const propertyGroupRegex = /(<PropertyGroup[^>]*>)/;
-                if (propertyGroupRegex.test(vcxprojContent)) {
-                    vcxprojContent = vcxprojContent.replace(propertyGroupRegex, `$1\n    <AppxBundlePlatforms>${appxBundlePlatformsValue}<\/AppxBundlePlatforms>`);
-                }
-                else {
-                    vcxprojContent = `<PropertyGroup>\n    <AppxBundlePlatforms>${appxBundlePlatformsValue}<\/AppxBundlePlatforms>\n<\/PropertyGroup>\n` + vcxprojContent;
-                }
-            }
-            await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
-            core.info(`Set AppxBundlePlatforms in ${vcxprojPath} to: ${appxBundlePlatformsValue}`);
-        }
-        else {
-            core.warning('No <PackageArchitecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.');
-        }
-    }
-    catch (error) {
-        throw new Error(`Failed to set AppxBundlePlatforms in vcxproj:\n${error}`);
-    }
-    core.startGroup(`--- ${vcxprojPath} file contents ---`);
-    const updatedVcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-    core.info(updatedVcxprojContent);
-    core.endGroup();
-    core.startGroup(`--- ${packageStoreAssociationFilePath} file contents ---`);
-    const updatedStoreAssociationContent = await fs.promises.readFile(packageStoreAssociationFilePath, 'utf8');
-    core.info(updatedStoreAssociationContent);
-    core.endGroup();
-    core.startGroup(`--- ${appxManifestPath} file contents ---`);
-    const updatedAppxManifestContent = await fs.promises.readFile(appxManifestPath, 'utf8');
-    core.info(updatedAppxManifestContent);
-    core.endGroup();
-}
-const windowsKitPaths = [
-    'C:\\Program Files (x86)\\Windows Kits\\10\\Include',
-    'C:\\Program Files\\Windows Kits\\10\\Include'
-];
-async function isWindowsSDKVersionAvailable(version) {
-    try {
-        for (const basePath of windowsKitPaths) {
-            try {
-                const versionPath = path.join(basePath, version);
-                await fs.promises.access(versionPath, fs.constants.R_OK);
-                core.info(`Found Windows SDK version ${version} at: ${versionPath}`);
-                return true;
-            }
-            catch (error) {
-                continue;
-            }
-        }
-        core.info(`Windows SDK version ${version} not found in standard locations`);
-        return false;
-    }
-    catch (error) {
-        core.info(`Error checking Windows SDK version ${version}: ${error}`);
-        return false;
-    }
-}
-async function getAvailableWindowsSDKVersion() {
-    try {
-        let allVersions = [];
-        for (const basePath of windowsKitPaths) {
-            try {
-                await fs.promises.access(basePath, fs.constants.R_OK);
-                const entries = await fs.promises.readdir(basePath);
-                const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
-                allVersions.push(...versions);
-                core.info(`Found Windows SDK versions in ${basePath}:`);
-                versions.forEach(version => core.info(`  - ${version}`));
-            }
-            catch (error) {
-                core.info(`Path not accessible: ${basePath}`);
-                continue;
-            }
-        }
-        if (allVersions.length === 0) {
-            core.warning('No Windows SDK versions found in standard installation paths. Build may fail if Unity references an unavailable SDK version.');
-            return null;
-        }
-        const uniqueVersions = [...new Set(allVersions)].sort((a, b) => {
-            const aParts = a.split('.').map(Number);
-            const bParts = b.split('.').map(Number);
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                const aVal = aParts[i] || 0;
-                const bVal = bParts[i] || 0;
-                if (aVal !== bVal) {
-                    return bVal - aVal;
-                }
-            }
-            return 0;
-        });
-        core.info(`All available Windows SDK versions:`);
-        uniqueVersions.forEach(version => core.info(`  - ${version}`));
-        return uniqueVersions[0];
-    }
-    catch (error) {
-        core.info(`Error detecting Windows SDK version: ${error}`);
-        core.warning('Could not automatically detect Windows SDK version. Build may fail if Unity references an unavailable SDK version.');
-        return null;
-    }
-}
-async function removeWindowsMobileSDKReference(vcxprojPath) {
-    core.startGroup(`Removing WindowsMobile SDKReference from ${vcxprojPath}...`);
-    try {
-        const vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-        core.startGroup(`--- ${vcxprojPath} file contents ---`);
-        core.info(vcxprojContent);
-        core.endGroup();
-        const updatedContent = vcxprojContent.replace(/<SDKReference\s+Include=["']WindowsMobile[^"']*["'][^>]*\/>|<SDKReference\s+Include=["']WindowsMobile[^"']*["'][^>]*>[\s\S]*?<\/SDKReference>/gi, '');
-        if (vcxprojContent !== updatedContent) {
-            await fs.promises.writeFile(vcxprojPath, updatedContent, 'utf8');
-            core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
-        }
-        else {
-            core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
-        }
-    }
-    catch (error) {
-        throw new Error(`Failed to remove WindowsMobile SDKReference: ${error.message}`);
-    }
-    finally {
-        core.endGroup();
-    }
-}
 
 })();
 
