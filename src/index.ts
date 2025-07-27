@@ -41,9 +41,11 @@ const main = async () => {
                 `/p:PackageCertificatePassword="${project.certificatePassword}"`
             );
         }
-        buildArgs.push(
-            `/p:AppxBundleOutput="${project.outputDirectory}"`,
-        );
+        if (project.outputDirectory) {
+            buildArgs.push(
+                `/p:AppxBundleOutput="${project.outputDirectory}"`,
+            );
+        }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.info(`additional-args: "${additionalArgs}"`);

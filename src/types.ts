@@ -9,12 +9,12 @@ export class UwpProject {
     public projectVcxProjPath: string,
     public il2cppOutputProjectVcxProjPath: string,
     public packageType: PackageType,
-    public outputDirectory: string,
+    public outputDirectory: string | null,
     public configuration: Configuration,
     public buildPlatform: BuildPlatform[],
-    public certificatePath?: string | null | undefined,
-    public certificatePassword?: string | null | undefined,
-    public windowsSdkVersion?: string | null | undefined
+    public certificatePath?: string | null,
+    public certificatePassword?: string | null,
+    public windowsSdkVersion?: string | null
   ) {
   }
 }

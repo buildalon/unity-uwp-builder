@@ -42,14 +42,12 @@ export async function getUwpProjectInputs(): Promise<UwpProject> {
   } catch (error) {
     throw new Error(`Solution file not found: "${projectSolutionPath}"`);
   }
-  let outputDirectory: string;
+  let outputDirectory: string | null = null;
   const outputDirectoryInput = core.getInput('output-directory');
   if (outputDirectoryInput) {
     outputDirectory = outputDirectoryInput;
-  } else {
-    outputDirectory = path.join(projectDirectory, projectName, `AppPackages`);
+    core.info(`outputDirectory: "${outputDirectory}"`);
   }
-  core.info(`outputDirectory: "${outputDirectory}"`);
   const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
   const vcxprojFiles = await vcxprojGlobber.glob();
   if (vcxprojFiles.length === 0) {

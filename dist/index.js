@@ -34792,15 +34792,12 @@ async function getUwpProjectInputs() {
     catch (error) {
         throw new Error(`Solution file not found: "${projectSolutionPath}"`);
     }
-    let outputDirectory;
+    let outputDirectory = null;
     const outputDirectoryInput = core.getInput('output-directory');
     if (outputDirectoryInput) {
         outputDirectory = outputDirectoryInput;
+        core.info(`outputDirectory: "${outputDirectory}"`);
     }
-    else {
-        outputDirectory = path.join(projectDirectory, projectName, `AppPackages`);
-    }
-    core.info(`outputDirectory: "${outputDirectory}"`);
     const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
     const vcxprojFiles = await vcxprojGlobber.glob();
     if (vcxprojFiles.length === 0) {
@@ -37133,7 +37130,9 @@ const main = async () => {
         if (project.certificatePassword) {
             buildArgs.push(`/p:PackageCertificateThumbprint=""`, `/p:PackageCertificatePassword="${project.certificatePassword}"`);
         }
-        buildArgs.push(`/p:AppxBundleOutput="${project.outputDirectory}"`);
+        if (project.outputDirectory) {
+            buildArgs.push(`/p:AppxBundleOutput="${project.outputDirectory}"`);
+        }
         const additionalArgs = core.getInput(`additional-args`);
         if (additionalArgs) {
             core.info(`additional-args: "${additionalArgs}"`);
