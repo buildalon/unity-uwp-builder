@@ -28426,24 +28426,41 @@ async function printFileContents(filePath) {
     }
 }
 async function removeWindowsMobileSDKReference(vcxprojPath) {
-    var _a;
     const vcxprojXml = await parseXml(vcxprojPath);
-    const sdkReferences = (_a = vcxprojXml.Project.ItemGroup) === null || _a === void 0 ? void 0 : _a.find((group) => group.SDKReference);
-    if (sdkReferences) {
-        const windowsMobileReferences = sdkReferences.SDKReference.filter((ref) => ref.Include && ref.Include.includes('WindowsMobile'));
-        if (windowsMobileReferences.length > 0) {
-            core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
-            sdkReferences.SDKReference = sdkReferences.SDKReference.filter((ref) => !windowsMobileReferences.includes(ref));
-            await writeXml(vcxprojPath, vcxprojXml);
-            core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
-            printFileContents(vcxprojPath);
-        }
-        else {
-            core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
+    let found = false;
+    for (const node of vcxprojXml) {
+        if (node.Project) {
+            for (const item of node.Project) {
+                if (item.ItemGroup) {
+                    for (const group of item.ItemGroup) {
+                        if (group.SDKReference) {
+                            let sdkRefs = Array.isArray(group.SDKReference) ? group.SDKReference : [group.SDKReference];
+                            const originalLength = sdkRefs.length;
+                            sdkRefs = sdkRefs.filter((ref) => {
+                                const include = ref['@_Include'] || ref.Include;
+                                if (include && include.includes('WindowsMobile')) {
+                                    found = true;
+                                    return false;
+                                }
+                                return true;
+                            });
+                            if (sdkRefs.length !== originalLength) {
+                                group.SDKReference = sdkRefs.length === 1 ? sdkRefs[0] : sdkRefs;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+    if (found) {
+        core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
+        await writeXml(vcxprojPath, vcxprojXml);
+        core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        printFileContents(vcxprojPath);
+    }
     else {
-        core.info(`No SDKReference found in ${vcxprojPath}`);
+        core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
     }
 }
 async function associateAppWithStore(vcxprojPath, sourcePackageAssociationFilePath) {

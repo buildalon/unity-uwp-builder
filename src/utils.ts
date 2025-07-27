@@ -115,20 +115,39 @@ export async function printFileContents(filePath: string): Promise<void> {
  */
 export async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<void> {
   const vcxprojXml = await parseXml(vcxprojPath);
-  const sdkReferences = vcxprojXml.Project.ItemGroup?.find((group: { SDKReference: any; }) => group.SDKReference);
-  if (sdkReferences) {
-    const windowsMobileReferences = sdkReferences.SDKReference.filter((ref: { Include: string | string[]; }) => ref.Include && ref.Include.includes('WindowsMobile'));
-    if (windowsMobileReferences.length > 0) {
-      core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
-      sdkReferences.SDKReference = sdkReferences.SDKReference.filter((ref: any) => !windowsMobileReferences.includes(ref));
-      await writeXml(vcxprojPath, vcxprojXml);
-      core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
-      printFileContents(vcxprojPath);
-    } else {
-      core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
+  let found = false;
+  for (const node of vcxprojXml) {
+    if (node.Project) {
+      for (const item of node.Project) {
+        if (item.ItemGroup) {
+          for (const group of item.ItemGroup) {
+            if (group.SDKReference) {
+              let sdkRefs = Array.isArray(group.SDKReference) ? group.SDKReference : [group.SDKReference];
+              const originalLength = sdkRefs.length;
+              sdkRefs = sdkRefs.filter((ref: { [x: string]: any; Include: any; }) => {
+                const include = ref['@_Include'] || ref.Include;
+                if (include && include.includes('WindowsMobile')) {
+                  found = true;
+                  return false;
+                }
+                return true;
+              });
+              if (sdkRefs.length !== originalLength) {
+                group.SDKReference = sdkRefs.length === 1 ? sdkRefs[0] : sdkRefs;
+              }
+            }
+          }
+        }
+      }
     }
+  }
+  if (found) {
+    core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
+    await writeXml(vcxprojPath, vcxprojXml);
+    core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+    printFileContents(vcxprojPath);
   } else {
-    core.info(`No SDKReference found in ${vcxprojPath}`);
+    core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
   }
 }
 /**
