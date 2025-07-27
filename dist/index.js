@@ -28163,7 +28163,7 @@ async function getUwpProjectInputs() {
     core.info(`projectSolutionPath: "${projectSolutionPath}"`);
     projectDirectory = path.dirname(projectSolutionPath);
     core.info(`projectDirectory: "${projectDirectory}"`);
-    const projectName = path.basename(projectDirectory);
+    const projectName = path.basename(projectSolutionPath, path.extname(projectSolutionPath));
     core.info(`projectName: "${projectName}"`);
     try {
         await fs.promises.access(projectSolutionPath, fs.constants.R_OK);
@@ -28180,6 +28180,8 @@ async function getUwpProjectInputs() {
         outputDirectory = path.join(projectDirectory, projectName, `AppPackages`);
     }
     core.info(`outputDirectory: "${outputDirectory}"`);
+    await fs.promises.mkdir(outputDirectory, { recursive: true });
+    await fs.promises.access(outputDirectory, fs.constants.R_OK | fs.constants.W_OK);
     const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
     const vcxprojFiles = await vcxprojGlobber.glob();
     if (vcxprojFiles.length === 0) {
