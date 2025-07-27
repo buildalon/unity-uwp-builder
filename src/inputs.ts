@@ -46,7 +46,7 @@ export async function getUwpProjectInputs(): Promise<UwpProject> {
   if (outputDirectoryInput) {
     outputDirectory = outputDirectoryInput;
   } else {
-    outputDirectory = path.join(projectDirectory, `AppPackages`);
+    outputDirectory = path.join(projectDirectory, projectName, `AppPackages`);
   }
   core.info(`outputDirectory: "${outputDirectory}"`);
   const vcxprojGlobber = await glob.create(path.join(projectDirectory, '**/*.vcxproj'), { matchDirectories: false });
