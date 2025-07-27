@@ -191,4 +191,3 @@ jobs:
           name: ${{ matrix.unity-version }} ${{ matrix.name }}
           path: |
             ${{ github.workspace }}/**/*.log
-            ${{ env.BUILD_OUTPUT_PATH }}
