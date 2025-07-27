@@ -29,6 +29,7 @@
     "10.0.26100.0"
   ],
   "store-association-path": [
+    "",
     "src/__tests__/source/Package.StoreAssociation.xml"
   ],
   "exclude": [
@@ -47,6 +48,10 @@
     {
       "uwp-package-type": "sideload",
       "store-association-path": "src/__tests__/source/Package.StoreAssociation.xml"
+    },
+    {
+      "uwp-package-type": "upload",
+      "store-association-path": ""
     }
   ]
 }
