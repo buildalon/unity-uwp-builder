@@ -28,6 +28,9 @@
     "10.0.22621.0",
     "10.0.26100.0"
   ],
+  "store-association-path": [
+    "src/__tests__/source/Package.StoreAssociation.xml"
+  ],
   "exclude": [
     {
       "uwp-package-type": "upload",
@@ -40,12 +43,9 @@
     {
       "uwp-subtarget": "HoloLens",
       "uwp-arch": "x64"
-    }
-  ],
-  "include": [
+    },
     {
-      "os": "windows-latest",
-      "uwp-package-type": "upload",
+      "uwp-package-type": "sideload",
       "store-association-path": "src/__tests__/source/Package.StoreAssociation.xml"
     }
   ]
