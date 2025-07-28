@@ -126,7 +126,7 @@ export async function getUwpProjectInputs(): Promise<UwpProject> {
   return new UwpProject(
     projectDirectory,
     projectSolutionPath,
-    path.basename(projectDirectory), // projectName
+    projectName,
     vcxprojPath,
     il2cppOutputProjectVcxProjPath,
     packageType,

@@ -34873,7 +34873,7 @@ async function getUwpProjectInputs() {
             core.endGroup();
         }
     }
-    return new types_1.UwpProject(projectDirectory, projectSolutionPath, path.basename(projectDirectory), vcxprojPath, il2cppOutputProjectVcxProjPath, packageType, outputDirectory, configuration, buildPlatform, certificatePath, certificatePassword, windowsSDKVersion);
+    return new types_1.UwpProject(projectDirectory, projectSolutionPath, projectName, vcxprojPath, il2cppOutputProjectVcxProjPath, packageType, outputDirectory, configuration, buildPlatform, certificatePath, certificatePassword, windowsSDKVersion);
 }
 async function getSigningCertificatePath(projectPath) {
     let certificatePath = core.getInput(`certificate-path`);
