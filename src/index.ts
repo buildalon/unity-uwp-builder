@@ -68,7 +68,17 @@ const main = async () => {
         } finally {
             core.endGroup();
         }
-        const outputDirectory = project.outputDirectory || path.join(project.projectDirectory, project.projectName, `AppPackages`);
+        let outputDirectory = project.outputDirectory || path.join(project.projectDirectory, project.projectName);
+        let appPackagesGlobber = await glob.create(path.join(outputDirectory, `**`, `AppPackages`), { matchDirectories: true });
+        const appPackages = await appPackagesGlobber.glob();
+        if (appPackages.length === 0) {
+            throw new Error(`No AppPackages directory found in output directory: "${outputDirectory}"!`);
+        }
+        if (appPackages.length > 1) {
+            outputDirectory = path.dirname(appPackages[0]);
+        } else {
+            outputDirectory = appPackages[0];
+        }
         try {
             await fs.promises.access(outputDirectory, fs.constants.R_OK);
         } catch (error) {
