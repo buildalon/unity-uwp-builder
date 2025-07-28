@@ -188,6 +188,6 @@ jobs:
         with:
           retention-days: 1
           overwrite: true
-          name: ${{ matrix.unity-version }} ${{ matrix.name }}
+          name: ${{ matrix.unity-version }} ${{ matrix.uwp-package-type }} ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.windows-sdk-version }} ${{ matrix.certificate-type }}
           path: |
             ${{ github.workspace }}/**/*.log
