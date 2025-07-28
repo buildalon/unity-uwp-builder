@@ -37090,7 +37090,7 @@ const main = async () => {
         finally {
             core.endGroup();
         }
-        let outputDirectory = project.outputDirectory || path.join(project.projectDirectory, project.projectName);
+        let outputDirectory = project.outputDirectory || project.projectDirectory;
         let appPackagesGlobber = await glob.create(path.join(outputDirectory, `**`, `AppPackages`), { matchDirectories: true });
         const appPackages = await appPackagesGlobber.glob();
         if (appPackages.length === 0) {
