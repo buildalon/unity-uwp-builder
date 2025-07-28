@@ -35048,56 +35048,17 @@ async function printFileContents(filePath) {
     }
 }
 async function removeWindowsMobileSDKReference(vcxprojPath) {
-    const xmlObj = await parseXml(vcxprojPath);
-    let found = false;
-    if (xmlObj.Project && xmlObj.Project.ItemGroup) {
-        let itemGroups = Array.isArray(xmlObj.Project.ItemGroup)
-            ? xmlObj.Project.ItemGroup
-            : [xmlObj.Project.ItemGroup];
-        itemGroups = itemGroups.filter((group) => {
-            if (group.SDKReference) {
-                const sdkRefs = Array.isArray(group.SDKReference) ? group.SDKReference : [group.SDKReference];
-                const hasWindowsMobile = sdkRefs.some((sdkRef) => {
-                    if (sdkRef.$ && sdkRef.$.Include && sdkRef.$.Include.includes('WindowsMobile')) {
-                        found = true;
-                        return true;
-                    }
-                    return false;
-                });
-                if (hasWindowsMobile) {
-                    return false;
-                }
-            }
-            return true;
-        });
-        xmlObj.Project.ItemGroup = itemGroups.length === 1 ? itemGroups[0] : itemGroups;
-    }
-    if (xmlObj.Project && xmlObj.Project.SDKReference) {
-        let sdkRefs = Array.isArray(xmlObj.Project.SDKReference)
-            ? xmlObj.Project.SDKReference
-            : [xmlObj.Project.SDKReference];
-        sdkRefs = sdkRefs.filter((sdkRef) => {
-            if (sdkRef.$ && sdkRef.$.Include && sdkRef.$.Include.includes('WindowsMobile')) {
-                found = true;
-                return false;
-            }
-            return true;
-        });
-        if (sdkRefs.length === 0) {
-            delete xmlObj.Project.SDKReference;
-        }
-        else {
-            xmlObj.Project.SDKReference = sdkRefs.length === 1 ? sdkRefs[0] : sdkRefs;
-        }
-    }
+    let vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
+    const itemGroupRegex = /([ \t]*<ItemGroup>\r?\n[ \t]*<SDKReference Include="WindowsMobile, Version=10.0.26100.0" \/>\r?\n[ \t]*<\/ItemGroup>\r?\n)/;
+    const found = itemGroupRegex.test(vcxprojContent);
     if (found) {
-        core.info(`Found WindowsMobile SDKReference in ${vcxprojPath}. Removing...`);
-        await writeXml(vcxprojPath, xmlObj);
-        core.info(`Removed WindowsMobile SDKReference from ${vcxprojPath}`);
+        core.info(`Removing WindowsMobile SDKReference ItemGroup from ${vcxprojPath}...`);
+        vcxprojContent = vcxprojContent.replace(itemGroupRegex, '');
+        await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
         await printFileContents(vcxprojPath);
     }
     else {
-        core.info(`No WindowsMobile SDKReference found in ${vcxprojPath}`);
+        core.info(`No WindowsMobile SDKReference ItemGroup found in ${vcxprojPath}`);
     }
     return found;
 }
@@ -35130,48 +35091,20 @@ async function copyPackageStoreAssociationFile(vcxprojPath, sourcePackageAssocia
     const packageStoreAssociationFilePath = path.join(path.dirname(vcxprojPath), 'Package.StoreAssociation.xml');
     await fs.promises.access(sourcePackageAssociationFilePath, fs.constants.R_OK | fs.constants.W_OK);
     await fs.promises.copyFile(sourcePackageAssociationFilePath, packageStoreAssociationFilePath);
-    const vcxProjXml = await parseXml(vcxprojPath);
-    let hasStoreAssociationFile = false;
-    const itemGroups = Array.isArray(vcxProjXml.Project.ItemGroup) ? vcxProjXml.Project.ItemGroup : [vcxProjXml.Project.ItemGroup];
-    for (const group of itemGroups) {
-        if (group.None) {
-            if (Array.isArray(group.None)) {
-                for (const noneItem of group.None) {
-                    if (noneItem.$ && noneItem.$.Include === 'Package.StoreAssociation.xml') {
-                        hasStoreAssociationFile = true;
-                        break;
-                    }
-                }
-            }
-            else if (group.None.$ && group.None.$.Include === 'Package.StoreAssociation.xml') {
-                hasStoreAssociationFile = true;
-                break;
-            }
-        }
-        if (hasStoreAssociationFile)
-            break;
+    let vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
+    let updated = false;
+    if (!/<PropertyGroup Label="Globals">[\s\S]*<GenerateTemporaryStoreCertificate>true<\/GenerateTemporaryStoreCertificate>[\s\S]*<\/PropertyGroup>/.test(vcxprojContent)) {
+        vcxprojContent = vcxprojContent.replace(/(<PropertyGroup Label="Globals">[\s\S]*?)(<\/PropertyGroup>)/, `$1  <GenerateTemporaryStoreCertificate>true<\/GenerateTemporaryStoreCertificate>\n  $2`);
+        updated = true;
     }
-    if (!hasStoreAssociationFile) {
-        core.info('Package.StoreAssociation.xml not referenced in vcxproj, updating...');
-        itemGroups.push({
-            None: [{ $: { Include: 'Package.StoreAssociation.xml' } }]
-        });
-        vcxProjXml.Project.ItemGroup = itemGroups;
+    if (!/<None[^>]*Include="Package\.StoreAssociation\.xml"/.test(vcxprojContent)) {
+        const itemGroup = '  <ItemGroup>\n    <None Include="Package.StoreAssociation.xml" />\n  </ItemGroup>\n';
+        vcxprojContent = vcxprojContent.replace(/([ \t]*<\/ItemGroup>\r?\n)([ \t]*<Import Project="\$\(VCTargetsPath\)\\Microsoft\.Cpp\.targets" \/>)/, '$1' + itemGroup + '$2');
+        updated = true;
     }
-    const propertyGroups = Array.isArray(vcxProjXml.Project.PropertyGroup) ? vcxProjXml.Project.PropertyGroup : [vcxProjXml.Project.PropertyGroup];
-    let hasGenerateTemporaryStoreCertificate = false;
-    for (const group of propertyGroups) {
-        if (group.GenerateTemporaryStoreCertificate === 'true' || (group.GenerateTemporaryStoreCertificate && group.GenerateTemporaryStoreCertificate[0] === 'true')) {
-            hasGenerateTemporaryStoreCertificate = true;
-            break;
-        }
+    if (updated) {
+        await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
     }
-    if (!hasGenerateTemporaryStoreCertificate) {
-        core.info('GenerateTemporaryStoreCertificate is not set to true, updating...');
-        propertyGroups.push({ GenerateTemporaryStoreCertificate: ['true'] });
-    }
-    vcxProjXml.Project.PropertyGroup = propertyGroups;
-    await writeXml(vcxprojPath, vcxProjXml);
     await printFileContents(vcxprojPath);
     return packageStoreAssociationFilePath;
 }

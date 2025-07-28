@@ -1,0 +1,21 @@
+diff --git a/src/__tests__/source/DummyApp.vcxproj b/src/__tests__/results/DummyApp.vcxproj
+index 3e91c9f..cf1d498 100644
+--- a/src/__tests__/source/DummyApp.vcxproj
++++ b/src/__tests__/results/DummyApp.vcxproj
+@@ -12,6 +12,7 @@
+     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+     <PackageCertificateKeyFile>WSATestCertificate.pfx</PackageCertificateKeyFile>
+     <UseSubFolderForOutputDirDuringMultiPlatformBuild>false</UseSubFolderForOutputDirDuringMultiPlatformBuild>
++    <GenerateTemporaryStoreCertificate>true</GenerateTemporaryStoreCertificate>
+   </PropertyGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <ItemGroup Label="ProjectConfigurations">
+@@ -265,7 +266,7 @@
+     </None>
+   </ItemGroup>
+   <ItemGroup>
+-    <SDKReference Include="WindowsMobile, Version=10.0.26100.0" />
++    <None Include="Package.StoreAssociation.xml" />
+   </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <Import Project="Unity Data.vcxitems" Label="Unity Data" />

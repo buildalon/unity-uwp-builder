@@ -1,0 +1,14 @@
+diff --git a/src/__tests__/source/DummyApp.vcxproj b/src/__tests__/results/DummyApp.vcxproj
+index 3e91c9f..d4a0ddb 100644
+--- a/src/__tests__/source/DummyApp.vcxproj
++++ b/src/__tests__/results/DummyApp.vcxproj
+@@ -264,9 +264,6 @@
+       <DeploymentContent>true</DeploymentContent>
+     </None>
+   </ItemGroup>
+-  <ItemGroup>
+-    <SDKReference Include="WindowsMobile, Version=10.0.26100.0" />
+-  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <Import Project="Unity Data.vcxitems" Label="Unity Data" />
+   <ImportGroup Label="ExtensionTargets">

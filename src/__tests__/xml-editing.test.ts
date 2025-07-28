@@ -2,9 +2,12 @@ import fs = require('fs');
 import path = require('path');
 import {
   associateAppWithStore,
-  parseXml,
   removeWindowsMobileSDKReference
 } from '../utils';
+import {
+  expectDiffToMatch,
+  getFileDiff
+} from './testUtils';
 
 describe('UWP Project XML Editing', () => {
   const sourceDir = path.join(__dirname, 'source');
@@ -23,27 +26,6 @@ describe('UWP Project XML Editing', () => {
     fs.copyFileSync(srcAssoc, path.join(resultsDir, 'Package.StoreAssociation.xml'));
   });
 
-  it('prints parsed structure for DummyApp.vcxproj', async () => {
-    const vcxprojTestFilePath = path.join(sourceDir, 'DummyApp.vcxproj');
-    const parsed = await parseXml(vcxprojTestFilePath);
-    fs.writeFileSync(path.join(resultsDir, 'DummyApp.vcxproj.json'), JSON.stringify(parsed, null, 2));
-    expect(parsed).toBeDefined();
-  });
-
-  it('prints parsed structure for Package.appxmanifest', async () => {
-    const packageManifestPath = path.join(sourceDir, 'Package.appxmanifest');
-    const parsed = await parseXml(packageManifestPath);
-    fs.writeFileSync(path.join(resultsDir, 'Package.appxmanifest.json'), JSON.stringify(parsed, null, 2));
-    expect(parsed).toBeDefined();
-  });
-
-  it('prints parsed structure for Package.StoreAssociation.xml', async () => {
-    const packageStoreAssociationPath = path.join(sourceDir, 'Package.StoreAssociation.xml');
-    const parsed = await parseXml(packageStoreAssociationPath);
-    fs.writeFileSync(path.join(resultsDir, 'Package.StoreAssociation.xml.json'), JSON.stringify(parsed, null, 2));
-    expect(parsed).toBeDefined();
-  });
-
   it('removes WindowsMobile SDKReference from DummyApp.vcxproj (git diff)', async () => {
     const vcxprojTestFilePath = path.join(resultsDir, 'DummyApp.vcxproj');
     const result = await removeWindowsMobileSDKReference(vcxprojTestFilePath);
@@ -52,6 +34,13 @@ describe('UWP Project XML Editing', () => {
     const fileContents = fs.readFileSync(vcxprojTestFilePath, 'utf8');
     const regex = /<SDKReference Include="WindowsMobile" Version="[\d.]+" \/>/;
     expect(regex.test(fileContents)).toBe(false);
+
+    // check that the file diff matches the expected diff `src\__tests__\source\remove-mobile-sdk.diff`
+    const sourceVcxproj = path.join(sourceDir, 'DummyApp.vcxproj');
+    const expectedDiffPath = path.join(sourceDir, 'remove-mobile-sdk.diff');
+    const actualDiff = getFileDiff(sourceVcxproj, vcxprojTestFilePath);
+    let expectedDiff = fs.readFileSync(expectedDiffPath, 'utf8');
+    expectDiffToMatch(actualDiff, expectedDiff);
   });
 
   it('associateAppWithStore updates Package.appxmanifest with store association info', async () => {
@@ -67,17 +56,12 @@ describe('UWP Project XML Editing', () => {
     expect(vcxprojContent).toContain('Package.StoreAssociation.xml');
     expect(vcxprojContent).toContain('GenerateTemporaryStoreCertificate');
     expect(vcxprojContent).toContain('true');
-  });
 
-  it('copyPackageStoreAssociationFile updates vcxproj with StoreAssociation reference and certificate property', async () => {
-    // Import the function directly
-    const { copyPackageStoreAssociationFile } = require('../utils');
-    const vcxprojTestFilePath = path.join(resultsDir, 'DummyApp.vcxproj');
-    const storeAssociationTestPath = path.join(resultsDir, 'Package.StoreAssociation.xml');
-    await copyPackageStoreAssociationFile(vcxprojTestFilePath, storeAssociationTestPath);
-    const updatedVcxproj = fs.readFileSync(vcxprojTestFilePath, 'utf8');
-    expect(updatedVcxproj).toContain('Package.StoreAssociation.xml');
-    expect(updatedVcxproj).toContain('GenerateTemporaryStoreCertificate');
-    expect(updatedVcxproj).toContain('true');
+    // Check that the file diff matches the expected diff `src\__tests__\source\associate-store.diff`
+    const sourceVcxproj = path.join(sourceDir, 'DummyApp.vcxproj');
+    const expectedDiffPath = path.join(sourceDir, 'associate-store.diff');
+    const actualDiff = getFileDiff(sourceVcxproj, vcxprojTestFilePath);
+    let expectedDiff = fs.readFileSync(expectedDiffPath, 'utf8');
+    expectDiffToMatch(actualDiff, expectedDiff);
   });
 });
