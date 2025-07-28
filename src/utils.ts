@@ -21,7 +21,7 @@ export async function getAvailableWindowsSDKVersion(): Promise<string | null> {
       const entries = await fs.promises.readdir(basePath);
       const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
       allVersions.push(...versions);
-      core.debug(`Found Windows SDK versions in ${basePath}:`);
+      core.debug(`Found Windows SDK versions in "${basePath}"`);
       versions.forEach(version => core.debug(`  - ${version}`));
     } catch (error) {
       continue;
@@ -55,7 +55,7 @@ export async function isWindowsSDKVersionAvailable(version: string): Promise<boo
     try {
       const versionPath = path.join(basePath, version);
       await fs.promises.access(versionPath, fs.constants.R_OK);
-      core.info(`Found Windows SDK version ${version} at: ${versionPath}`);
+      core.info(`Found Windows SDK version ${version} at: "${versionPath}"`);
       return true;
     } catch (error) {
       continue;
@@ -117,16 +117,13 @@ export async function printFileContents(filePath: string): Promise<void> {
  */
 export async function removeWindowsMobileSDKReference(vcxprojPath: string): Promise<boolean> {
   let vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-  // Match the exact ItemGroup block for WindowsMobile SDKReference as in the diff, preserving whitespace
-  const itemGroupRegex = /([ \t]*<ItemGroup>\r?\n[ \t]*<SDKReference Include="WindowsMobile, Version=10.0.26100.0" \/>\r?\n[ \t]*<\/ItemGroup>\r?\n)/;
+  const itemGroupRegex = /([ \t]*<ItemGroup>\r?\n[ \t]*<SDKReference Include="WindowsMobile, Version=[^"\s]+" \/>\r?\n[ \t]*<\/ItemGroup>\r?\n)/;
   const found = itemGroupRegex.test(vcxprojContent);
   if (found) {
-    core.info(`Removing WindowsMobile SDKReference ItemGroup from ${vcxprojPath}...`);
+    core.info(`Removing WindowsMobile SDKReference ItemGroup from "${vcxprojPath}"`);
     vcxprojContent = vcxprojContent.replace(itemGroupRegex, '');
     await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
     await printFileContents(vcxprojPath);
-  } else {
-    core.info(`No WindowsMobile SDKReference ItemGroup found in ${vcxprojPath}`);
   }
   return found;
 }
@@ -163,7 +160,7 @@ export async function associateAppWithStore(vcxprojPath: string, sourcePackageAs
     }
   }
   await writeXml(appxManifestPath, appxManifestXml);
-  core.info(`Updated Package.appxmanifest with identity information from ${packageStoreAssociationFilePath}`);
+  core.info(`Updated Package.appxmanifest with identity information from "${packageStoreAssociationFilePath}"`);
   await printFileContents(appxManifestPath);
 }
 /**
@@ -189,12 +186,12 @@ export async function copyPackageStoreAssociationFile(vcxprojPath: string, sourc
     // Insert before </Project>, on a new line, matching the expected diff formatting
     const itemGroup = '  <ItemGroup>\n    <None Include="Package.StoreAssociation.xml" />\n  </ItemGroup>\n';
     // Find the last closing ItemGroup and ensure the new ItemGroup is on its own line
-    vcxprojContent = vcxprojContent.replace(/([ \t]*<\/ItemGroup>\r?\n)([ \t]*<Import Project="\$\(VCTargetsPath\)\\Microsoft\.Cpp\.targets" \/>)/, '$1' + itemGroup + '$2');
+    vcxprojContent = vcxprojContent.replace(/([ \t]*<\/ItemGroup>\r?\n)([ \t]*<Import Project="\$\(VCTargetsPath\)\\Microsoft\.Cpp\.targets" \/>)/, `$1${itemGroup}$2`);
     updated = true;
   }
   if (updated) {
     await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
+    await printFileContents(vcxprojPath);
   }
-  await printFileContents(vcxprojPath);
   return packageStoreAssociationFilePath;
 }

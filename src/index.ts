@@ -84,7 +84,7 @@ const main = async () => {
         } catch (error) {
             throw new Error(`Output directory not found: "${outputDirectory}".`);
         }
-        core.info(`outputDirectory: ${outputDirectory}`);
+        core.info(`outputDirectory: "${outputDirectory}"`);
         core.setOutput(`output-directory`, outputDirectory);
         const allGlobber = await glob.create(path.join(outputDirectory, '**/*'));
         const allFiles = await allGlobber.glob();

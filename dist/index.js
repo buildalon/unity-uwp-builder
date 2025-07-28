@@ -34970,7 +34970,7 @@ async function getAvailableWindowsSDKVersion() {
             const entries = await fs.promises.readdir(basePath);
             const versions = entries.filter(entry => /^10\.0\.\d+\.\d+$/.test(entry));
             allVersions.push(...versions);
-            core.debug(`Found Windows SDK versions in ${basePath}:`);
+            core.debug(`Found Windows SDK versions in "${basePath}"`);
             versions.forEach(version => core.debug(`  - ${version}`));
         }
         catch (error) {
@@ -35001,7 +35001,7 @@ async function isWindowsSDKVersionAvailable(version) {
         try {
             const versionPath = path.join(basePath, version);
             await fs.promises.access(versionPath, fs.constants.R_OK);
-            core.info(`Found Windows SDK version ${version} at: ${versionPath}`);
+            core.info(`Found Windows SDK version ${version} at: "${versionPath}"`);
             return true;
         }
         catch (error) {
@@ -35049,16 +35049,13 @@ async function printFileContents(filePath) {
 }
 async function removeWindowsMobileSDKReference(vcxprojPath) {
     let vcxprojContent = await fs.promises.readFile(vcxprojPath, 'utf8');
-    const itemGroupRegex = /([ \t]*<ItemGroup>\r?\n[ \t]*<SDKReference Include="WindowsMobile, Version=10.0.26100.0" \/>\r?\n[ \t]*<\/ItemGroup>\r?\n)/;
+    const itemGroupRegex = /([ \t]*<ItemGroup>\r?\n[ \t]*<SDKReference Include="WindowsMobile, Version=[^"\s]+" \/>\r?\n[ \t]*<\/ItemGroup>\r?\n)/;
     const found = itemGroupRegex.test(vcxprojContent);
     if (found) {
-        core.info(`Removing WindowsMobile SDKReference ItemGroup from ${vcxprojPath}...`);
+        core.info(`Removing WindowsMobile SDKReference ItemGroup from "${vcxprojPath}"`);
         vcxprojContent = vcxprojContent.replace(itemGroupRegex, '');
         await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
         await printFileContents(vcxprojPath);
-    }
-    else {
-        core.info(`No WindowsMobile SDKReference ItemGroup found in ${vcxprojPath}`);
     }
     return found;
 }
@@ -35084,7 +35081,7 @@ async function associateAppWithStore(vcxprojPath, sourcePackageAssociationFilePa
         }
     }
     await writeXml(appxManifestPath, appxManifestXml);
-    core.info(`Updated Package.appxmanifest with identity information from ${packageStoreAssociationFilePath}`);
+    core.info(`Updated Package.appxmanifest with identity information from "${packageStoreAssociationFilePath}"`);
     await printFileContents(appxManifestPath);
 }
 async function copyPackageStoreAssociationFile(vcxprojPath, sourcePackageAssociationFilePath) {
@@ -35099,13 +35096,13 @@ async function copyPackageStoreAssociationFile(vcxprojPath, sourcePackageAssocia
     }
     if (!/<None[^>]*Include="Package\.StoreAssociation\.xml"/.test(vcxprojContent)) {
         const itemGroup = '  <ItemGroup>\n    <None Include="Package.StoreAssociation.xml" />\n  </ItemGroup>\n';
-        vcxprojContent = vcxprojContent.replace(/([ \t]*<\/ItemGroup>\r?\n)([ \t]*<Import Project="\$\(VCTargetsPath\)\\Microsoft\.Cpp\.targets" \/>)/, '$1' + itemGroup + '$2');
+        vcxprojContent = vcxprojContent.replace(/([ \t]*<\/ItemGroup>\r?\n)([ \t]*<Import Project="\$\(VCTargetsPath\)\\Microsoft\.Cpp\.targets" \/>)/, `$1${itemGroup}$2`);
         updated = true;
     }
     if (updated) {
         await fs.promises.writeFile(vcxprojPath, vcxprojContent, 'utf8');
+        await printFileContents(vcxprojPath);
     }
-    await printFileContents(vcxprojPath);
     return packageStoreAssociationFilePath;
 }
 
@@ -37108,7 +37105,7 @@ const main = async () => {
         catch (error) {
             throw new Error(`Output directory not found: "${outputDirectory}".`);
         }
-        core.info(`outputDirectory: ${outputDirectory}`);
+        core.info(`outputDirectory: "${outputDirectory}"`);
         core.setOutput(`output-directory`, outputDirectory);
         const allGlobber = await glob.create(path.join(outputDirectory, '**/*'));
         const allFiles = await allGlobber.glob();
