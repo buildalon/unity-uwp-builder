@@ -91,10 +91,9 @@ export async function getUwpProjectInputs(): Promise<UwpProject> {
   const buildPlatformInput = core.getInput('platform', { required: false })?.split(/[,|]/).map(p => p.trim()) || [];
   const buildPlatform: BuildPlatform[] = [];
   for (const platform of buildPlatformInput) {
-    if (!['x86', 'x64', 'ARM', 'ARM64'].includes(platform)) {
-      throw new Error(`Invalid build platform: "${platform}". Must be one of 'x86', 'x64', 'ARM', or 'ARM64'.`);
+    if (['x86', 'x64', 'ARM', 'ARM64'].includes(platform)) {
+      buildPlatform.push(platform as BuildPlatform);
     }
-    buildPlatform.push(platform as BuildPlatform);
   }
   const certificatePath = await getSigningCertificatePath(projectDirectory);
   const certificatePassword = core.getInput(`certificate-password`);
