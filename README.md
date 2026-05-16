@@ -16,17 +16,22 @@ steps:
   # required for unity-uwp-builder action
   - uses: microsoft/setup-msbuild@v2
 
-  - uses: buildalon/unity-uwp-builder@v1
+  - uses: buildalon/unity-uwp-builder@v2
     id: uwp-build
     with:
-      project-path: '/path/to/your/build/output/directory'
-      architecture: 'ARM64'
-      package-type: 'upload'
+      # The directory that contains the exported visual studio project from Unity.
+      project-path: '/path/to/your/build/output/directory/**/*.sln'
+      configuration: 'Master' # Can be 'Master', 'Release', or 'Debug'. Defaults to 'Master'.
+      platform: 'x64' # Optional, can be 'x86', 'x64', 'ARM', or 'ARM64'. Defaults to platforms defined in the visual studio project.
+      package-type: 'sideload' # or 'upload'
+      # store-association-path: '/path/to/Package.StoreAssociation.xml' # required when package-type is 'upload'
+      # certificate-path: '/path/to/your/certificate.pfx' # required when package-type is 'upload'
+      # certificate-password: 'your-certificate-password' # required when providing your own certificate
+      # windows-sdk-version: '10.0.22621.0' # optional, the latest available SDK version will be used if not specified
 
   - name: print outputs
     shell: bash
     run: |
-      echo "Executable: ${{ steps.uwp-build.outputs.executable }}"
       echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
       ls -R "${{ steps.uwp-build.outputs.output-directory }}"
 ```
@@ -37,11 +42,14 @@ steps:
 | ---- | ----------- | -------- |
 | `project-path` | The directory that contains the exported visual studio project from Unity. | true |
 | `configuration` | The configuration to use when building the visual studio project. | Defaults to `Master`. |
-| `architecture` | The architecture to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. | Defaults to `ARM64`. |
+| `platform` | The platform to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. | false |
 | `package-type` | The type of package to generate. Can be: `sideload` or `upload`. | Defaults to `sideload`. |
-| `certificate-path` | The path to the certificate to use when packaging the UWP project. | Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate. |
+| `certificate-path` | The path to the certificate to use when packaging the UWP project. | Required when `package-type` is `upload`. Defaults to the Unity generated test certificate. |
+| `certificate-password` | The password for the certificate. | Required when providing your own certificate. |
+| `windows-sdk-version` | The Windows SDK version to use for building. If not specified, the latest available SDK version will be automatically detected and used. | Optional. Format: `10.0.xxxxx.x` (e.g., `10.0.22621.0`) |
+| `additional-args` | Additional arguments to pass to the msbuild command. | false |
+| `store-association-path` | The path to the Package.StoreAssociation.xml file. | When `package-type === upload`. |
 
 ### outputs
 
-- `executable`: The path to the generated appx executable.
 - `output-directory`: The path to the package output directory.

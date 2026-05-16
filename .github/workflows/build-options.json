@@ -1,0 +1,45 @@
+{
+  "os": [
+    "windows-latest"
+  ],
+  "build-target": [
+    "WSAPlayer"
+  ],
+  "unity-version": [
+    "6000.0.49f1 (840e0a9776d9)"
+  ],
+  "uwp-arch": [
+    "x64",
+    "ARM64"
+  ],
+  "uwp-subtarget": [
+    "PC",
+    "HoloLens"
+  ],
+  "uwp-package-type": [
+    "sideload",
+    "upload"
+  ],
+  "certificate-type": [
+    "default",
+    "custom"
+  ],
+  "windows-sdk-version": [
+    "10.0.22621.0",
+    "10.0.26100.0"
+  ],
+  "exclude": [
+    {
+      "uwp-package-type": "upload",
+      "certificate-type": "custom"
+    },
+    {
+      "uwp-subtarget": "PC",
+      "uwp-arch": "ARM64"
+    },
+    {
+      "uwp-subtarget": "HoloLens",
+      "uwp-arch": "x64"
+    }
+  ]
+}
