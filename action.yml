@@ -1,14 +1,14 @@
-name: Buildalon unity-uwp-builder
-description: A GitHub Action to build Unity exported UWP projects.
+name: 'Buildalon unity-uwp-builder'
+description: 'A GitHub Action to build Unity exported UWP projects.'
 branding:
-  icon: package
-  color: red
+  icon: 'package'
+  color: 'red'
 inputs:
   project-path:
-    description: The directory that contains the exported visual studio project from Unity.
+    description: 'The directory that contains the exported visual studio project from Unity.'
     required: true
   configuration:
-    description: The configuration to use when building the visual studio project. Defaults to `Master`.
+    description: 'The configuration to use when building the visual studio project. Defaults to `Master`.'
     required: false
     default: 'Master'
   architecture:
@@ -16,20 +16,20 @@ inputs:
     required: false
     default: 'ARM64'
   additional-args:
-    description: Additional arguments to pass to the msbuild command.
+    description: 'Additional arguments to pass to the msbuild command.'
     required: false
   package-type:
     description: 'The type of package to generate. Can be: `sideload` or `upload`. Defaults to `sideload`.'
     required: false
     default: 'sideload'
   certificate-path:
-    description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate.'
+    description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. If no certificate is provided, then a test certificate is created.'
     required: false
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
 outputs:
   executable:
-    description: The path to the generated executable.
+    description: 'The path to the generated executable.'
   output-directory:
-    description: The path to the output-directory.
-runs:
-  using: 'node20'
-  main: 'dist/index.js'
+    description: 'The path to the output-directory.'

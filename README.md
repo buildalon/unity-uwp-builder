@@ -16,6 +16,7 @@ steps:
   # required for unity-uwp-builder action
   - uses: microsoft/setup-msbuild@v2
 
+  # builds visual studio project for UWP and packages it for store upload
   - uses: buildalon/unity-uwp-builder@v1
     id: uwp-build
     with:
@@ -45,3 +46,4 @@ steps:
 
 - `executable`: The path to the generated appx executable.
 - `output-directory`: The path to the package output directory.
+
