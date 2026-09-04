@@ -1,6 +1,6 @@
 {
   "name": "unity-uwp-builder",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A GitHub Action to build Unity exported UWP projects.",
   "author": "buildalon",
   "license": "MIT",
@@ -15,15 +15,15 @@
   "main": "dist/index.js",
   "keywords": [],
   "dependencies": {
-    "@actions/core": "^1.10.1",
+    "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/glob": "^0.5.0"
+    "@actions/glob": "^0.5.1"
   },
   "devDependencies": {
-    "@types/node": "^22.2.0",
+    "@types/node": "^22.20.1",
     "@vercel/ncc": "^0.34.0",
     "shx": "^0.3.4",
-    "typescript": "^5.5.4"
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "build": "npm run clean && npm run bundle",
