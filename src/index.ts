@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import * as glob from '@actions/glob';
+import * as glob from './glob';
 import * as path from 'path';
 import * as fs from 'fs';
 
