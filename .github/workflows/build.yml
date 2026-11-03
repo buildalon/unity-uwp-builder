@@ -54,12 +54,8 @@ jobs:
         id: unity-project
         with:
           project-name: Test Project
-      - name: Set Unity Project Path
-        env:
-          PROJECT_PATH: ${{ steps.unity-project.outputs.project-path }}
-        run: echo "UNITY_PROJECT_PATH=${PROJECT_PATH}" >> "${GITHUB_ENV}"
       - name: Add Build Pipeline Package
-        working-directory: ${{ env.UNITY_PROJECT_PATH }}
+        working-directory: ${{ steps.unity-project.outputs.project-path }}
         run: |
           npm install -g openupm-cli
           openupm add com.virtualmaker.buildalon
@@ -67,14 +63,17 @@ jobs:
         name: ${{ matrix.build-target }}-Validate
         with:
           build-target: ${{ matrix.build-target }}
+          project-path: ${{ steps.unity-project.outputs.project-path }}
           log-name: ${{ matrix.build-target }}-Validate
-          args: -quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject
+          args: -quit -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject
       - uses: buildalon/unity-action@v4
         name: ${{ matrix.build-target }}-Build
+        timeout-minutes: 30
         with:
           build-target: ${{ matrix.build-target }}
+          project-path: ${{ steps.unity-project.outputs.project-path }}
           log-name: ${{ matrix.build-target }}-Build
-          args: -quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory "${{ env.BUILD_OUTPUT_PATH }}" -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }}${{ matrix.windows-sdk-version && format(' -wsaUWPSDK {0}', matrix.windows-sdk-version) || '' }}
+          args: -quit -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory "${{ env.BUILD_OUTPUT_PATH }}" -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }}${{ matrix.windows-sdk-version && format(' -wsaUWPSDK {0}', matrix.windows-sdk-version) || '' }}
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.x'
