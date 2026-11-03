@@ -1,97 +1,82 @@
 name: validate
 on:
+  schedule:
+    - cron: '0 8 26 * *' # monthly: the older editors, which no longer change
   push:
-    branches:
-      - 'main'
+    branches: ['main']
   pull_request:
-    branches:
-      - '*'
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    branches: ['*']
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+    inputs:
+      editors:
+        description: Which editors to test
+        type: choice
+        options: [unity-6-and-newer, legacy]
+        default: unity-6-and-newer
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # the monthly legacy run gets its own group, so a push to main does not cancel it
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'legacy' || inputs.editors || 'unity-6-and-newer' }}
   cancel-in-progress: true
 jobs:
-  unity-build:
-    name: '(${{ matrix.unity-version }}) ${{ matrix.build-target }} - ${{ matrix.uwp-package-type }}'
-    env:
-      TEMPLATE_PATH: ''
-      UNITY_PROJECT_PATH: '' # set by unity-setup action
-    runs-on: ${{ matrix.os }}
+  changes:
+    permissions:
+      contents: read
+      pull-requests: read
+    # docs-only pull requests skip validation; validate-result still reports for them
+    uses: RageAgainstThePixel/workflows/.github/workflows/detect-changes.yml@main
+  setup:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && github.event.pull_request.draft == false }}
+    permissions:
+      contents: read
+    # pull requests and pushes test the streams Unity lists; the older editors run monthly or on demand
+    uses: RageAgainstThePixel/workflows/.github/workflows/unity-stream-matrix.yml@main
+    with:
+      legacy: ${{ inputs.editors == 'legacy' }}
+  # every row is a Windows runner, a new machine every job, so each row activates with the account and returns the
+  # license; there is no shared run license to hand out
+  validate:
+    if: ${{ needs.setup.outputs.jobs }}
+    needs: setup
+    name: build ${{ matrix.jobs.name }}
+    permissions:
+      contents: read
     strategy:
+      matrix: ${{ fromJSON(needs.setup.outputs.jobs) }}
       fail-fast: false
-      matrix:
-        os: [windows-latest]
-        build-target: [WSAPlayer]
-        unity-version: [2021.x, 2022.x, 6000.x]
-        uwp-package-type: [sideload, upload]
+    secrets: inherit
+    uses: ./.github/workflows/build.yml
+    with:
+      matrix: ${{ toJSON(matrix.jobs.matrix) }}
+      allow-security-alert: ${{ needs.setup.outputs.allow-security-alert == 'true' }}
+  # the one required check: passes when every job passed, or was skipped for a draft or a docs-only change
+  validate-result:
+    needs: [changes, setup, validate]
+    if: always()
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    permissions: {}
     steps:
-      - uses: actions/checkout@v4
-      - run: 'npm install -g openupm-cli'
-        # Installs the Unity Editor based on your project version text file
-        # sets -> env.UNITY_EDITOR_PATH
-        # sets -> env.UNITY_PROJECT_PATH
-      - uses: buildalon/unity-setup@v1
-        with:
-          version-file: 'None'
-          build-targets: ${{ matrix.build-target }}
-          unity-version: ${{ matrix.unity-version }}
-      - name: Find Unity Template Path
-        run: |
-          $rootPath = $env:UNITY_EDITOR_PATH -replace "Editor.*", ""
-          Write-Host "ROOT_PATH=$rootPath"
-          $templatePath = Get-ChildItem -Recurse -Filter "com.unity.template.3d*.tgz" -Path $rootPath | Select-Object -First 1 | Select-Object -ExpandProperty FullName
-          Write-Host "TEMPLATE_PATH=$templatePath"
-          echo "TEMPLATE_PATH=$templatePath" >> $env:GITHUB_ENV
-          $projectPath = "${{ github.workspace }}/Test Project"
-          echo "UNITY_PROJECT_PATH=$projectPath" >> $env:GITHUB_ENV
-        shell: pwsh
-        # Activates the installation with the provided credentials
-      - uses: buildalon/activate-unity-license@v1
-        with:
-          license: 'Personal'
-          username: ${{ secrets.UNITY_USERNAME }}
-          password: ${{ secrets.UNITY_PASSWORD }}
-      - uses: buildalon/unity-action@v1
-        name: Create Test Project
-        with:
-          log-name: 'create-test-project'
-          args: '-quit -nographics -batchmode -createProject "${{ env.UNITY_PROJECT_PATH }}" -cloneFromTemplate "${{ env.TEMPLATE_PATH }}"'
-      - run: 'openupm add com.virtualmaker.buildalon'
-        name: Add Build Pipeline Package
-        working-directory: ${{ env.UNITY_PROJECT_PATH }}
-      - uses: buildalon/unity-action@v1
-        name: '${{ matrix.build-target }}-Validate'
-        with:
-          build-target: ${{ matrix.build-target }}
-          log-name: '${{ matrix.build-target }}-Validate'
-          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject -importTMProEssentialsAsset'
-      - uses: buildalon/unity-action@v1
-        name: '${{ matrix.build-target }}-Build'
-        with:
-          build-target: ${{ matrix.build-target }}
-          log-name: '${{ matrix.build-target }}-Build'
-          args: '-quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -sceneList Assets/Scenes/SampleScene.unity -arch ARM64'
-      - uses: microsoft/setup-msbuild@v2
-
-        # builds visual studio project for UWP and packages it as an appx
-      - uses: ./ # buildalon/unity-uwp-builder
-        id: uwp-build
-        with:
-          project-path: ${{ env.UNITY_PROJECT_PATH }}/Builds/WSAPlayer
-          package-type: ${{ matrix.uwp-package-type }}
-
-      - name: print outputs
+      - name: Check results
         shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          echo "Executable: ${{ steps.uwp-build.outputs.executable }}"
-          echo "Output Directory: ${{ steps.uwp-build.outputs.output-directory }}"
-          ls -R "${{ steps.uwp-build.outputs.output-directory }}"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          retention-days: 1
-          name: ${{ github.run_number }}.${{ github.run_attempt }} ${{ matrix.unity-version }}-${{ matrix.build-target }}-${{ matrix.uwp-package-type }}
-          path: |
-            ${{ github.workspace }}/**/*.log
-            ${{ steps.uwp-build.outputs.output-directory }}
+          echo "results: ${RESULTS}"
+          for result in ${RESULTS}; do
+            case "${result}" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
+  timeline:
+    needs: [setup, validate]
+    if: always()
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: Kesin11/actions-timeline@460b1f8a750077029ad3589824d371b200e91dcf # v3.2.1
+        continue-on-error: true

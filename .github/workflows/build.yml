@@ -1,0 +1,156 @@
+name: build
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        required: true
+        type: string
+      allow-security-alert:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      UNITY_USERNAME:
+        required: true
+      UNITY_PASSWORD:
+        required: true
+jobs:
+  build:
+    # rows are grouped by editor version, so the name carries the rest of the row
+    name: ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.uwp-package-type }} ${{ matrix.certificate-type }} ${{ matrix.windows-sdk-version || 'latest' }}
+    strategy:
+      matrix: ${{ fromJSON(inputs.matrix) }}
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    # a hung editor, licensing call or IL2CPP build must not hold the matrix
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      BUILD_OUTPUT_PATH: ${{ github.workspace }}/Builds/${{ matrix.build-target }}
+      CERTIFICATE_PASSWORD: TestPassword123 # only protects the throwaway test certificate
+    steps:
+      - uses: actions/checkout@v7
+      - uses: buildalon/unity-setup@v3
+        timeout-minutes: 30
+        with:
+          version-file: 'None'
+          build-targets: ${{ matrix.build-target }}
+          unity-version: ${{ matrix.unity-version }}
+          allow-security-alert: ${{ inputs.allow-security-alert }}
+      - uses: buildalon/activate-unity-license@v3
+        with:
+          license: Personal
+          username: ${{ secrets.UNITY_USERNAME }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+      - uses: buildalon/create-unity-project@v4
+        id: unity-project
+        with:
+          project-name: Test Project
+      - name: Set Unity Project Path
+        env:
+          PROJECT_PATH: ${{ steps.unity-project.outputs.project-path }}
+        run: echo "UNITY_PROJECT_PATH=${PROJECT_PATH}" >> "${GITHUB_ENV}"
+      - name: Add Build Pipeline Package
+        working-directory: ${{ env.UNITY_PROJECT_PATH }}
+        run: |
+          npm install -g openupm-cli
+          openupm add com.virtualmaker.buildalon
+      - uses: buildalon/unity-action@v4
+        name: ${{ matrix.build-target }}-Validate
+        with:
+          build-target: ${{ matrix.build-target }}
+          log-name: ${{ matrix.build-target }}-Validate
+          args: -quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.ValidateProject
+      - uses: buildalon/unity-action@v4
+        name: ${{ matrix.build-target }}-Build
+        with:
+          build-target: ${{ matrix.build-target }}
+          log-name: ${{ matrix.build-target }}-Build
+          args: -quit -nographics -batchmode -executeMethod Buildalon.Editor.BuildPipeline.UnityPlayerBuildTools.StartCommandLineBuild -buildOutputDirectory "${{ env.BUILD_OUTPUT_PATH }}" -sceneList Assets/Scenes/SampleScene.unity -arch ${{ matrix.uwp-arch }} -wsaSubtarget ${{ matrix.uwp-subtarget }}${{ matrix.windows-sdk-version && format(' -wsaUWPSDK {0}', matrix.windows-sdk-version) || '' }}
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.x'
+      - uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
+      # New-SelfSignedCertificate and the certificate store only exist in PowerShell
+      - name: Create Test Certificate
+        if: ${{ matrix.certificate-type == 'custom' }}
+        shell: pwsh
+        run: |
+          $certPath = Join-Path $env:GITHUB_WORKSPACE 'TestCert.pfx'
+          $cert = New-SelfSignedCertificate -Type Custom -Subject 'CN=TestPublisher' -KeyUsage DigitalSignature -FriendlyName 'Test UWP Certificate' -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          $password = ConvertTo-SecureString -String $env:CERTIFICATE_PASSWORD -Force -AsPlainText
+          Export-PfxCertificate -Cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath $certPath -Password $password | Out-Null
+          # trust it, so the signature validates below
+          Import-PfxCertificate -FilePath $certPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Password $password | Out-Null
+          Write-Host "Test certificate created at: $certPath"
+      # builds visual studio project for UWP and packages it
+      - uses: ./ # buildalon/unity-uwp-builder
+        id: uwp-build
+        with:
+          project-path: ${{ env.BUILD_OUTPUT_PATH }}
+          platform: ${{ matrix.uwp-arch }}
+          package-type: ${{ matrix.uwp-package-type }}
+          certificate-path: ${{ matrix.certificate-type == 'custom' && format('{0}/TestCert.pfx', github.workspace) || '' }}
+          certificate-password: ${{ matrix.certificate-type == 'custom' && env.CERTIFICATE_PASSWORD || '' }}
+          windows-sdk-version: ${{ matrix.windows-sdk-version }}
+      - name: Validate Outputs
+        env:
+          EXECUTABLE: ${{ steps.uwp-build.outputs.executable }}
+          BUNDLES: ${{ steps.uwp-build.outputs.bundles }}
+          OUTPUT_DIRECTORY: ${{ steps.uwp-build.outputs.output-directory }}
+          PACKAGE_TYPE: ${{ matrix.uwp-package-type }}
+        run: |
+          set -euo pipefail
+          echo "Executable: ${EXECUTABLE}"
+          echo "Bundles: ${BUNDLES}"
+          echo "Output Directory: ${OUTPUT_DIRECTORY}"
+          if [ ! -d "${OUTPUT_DIRECTORY}" ]; then
+            echo "::error::Output directory does not exist: ${OUTPUT_DIRECTORY}"
+            exit 1
+          fi
+          if [ ! -f "${EXECUTABLE}" ]; then
+            echo "::error::Executable does not exist: ${EXECUTABLE}"
+            exit 1
+          fi
+          if [ "${PACKAGE_TYPE}" = upload ] && [[ ! "${EXECUTABLE,,}" =~ upload$ ]]; then
+            echo "::error::An upload build must output an .appxupload or .msixupload, got ${EXECUTABLE}"
+            exit 1
+          fi
+          if [ "$(jq 'length' <<< "${BUNDLES}")" -eq 0 ]; then
+            echo "::error::No bundles in the bundles output"
+            exit 1
+          fi
+          ls -R "${OUTPUT_DIRECTORY}"
+      # Get-AuthenticodeSignature only exists in PowerShell
+      - name: Validate Certificate Usage
+        if: ${{ matrix.certificate-type == 'custom' && matrix.uwp-package-type == 'sideload' }}
+        shell: pwsh
+        env:
+          BUNDLES: ${{ steps.uwp-build.outputs.bundles }}
+        run: |
+          $allValid = $true
+          foreach ($bundle in ($env:BUNDLES | ConvertFrom-Json)) {
+            # the Microsoft dependency packages carry Microsoft's signature
+            if ($bundle -match 'Microsoft\.VCLibs\..*\.appx$') { continue }
+            $signature = Get-AuthenticodeSignature -FilePath $bundle
+            Write-Host "$bundle -> $($signature.Status) $($signature.SignerCertificate.Subject)"
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notlike '*TestPublisher*') {
+              Write-Host "::error::$bundle is not signed with the test certificate"
+              $allValid = $false
+            }
+          }
+          if (-not $allValid) { exit 1 }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          retention-days: 1
+          name: ${{ github.run_number }}.${{ github.run_attempt }} ${{ matrix.unity-version }} ${{ matrix.uwp-arch }} ${{ matrix.uwp-subtarget }} ${{ matrix.uwp-package-type }} ${{ matrix.certificate-type }} ${{ matrix.windows-sdk-version || 'latest' }}
+          path: |
+            ${{ github.workspace }}/**/*.log
+            ${{ steps.uwp-build.outputs.output-directory }}

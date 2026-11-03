@@ -5,31 +5,45 @@ branding:
   color: red
 inputs:
   project-path:
-    description: The directory that contains the exported visual studio project from Unity.
+    description: The directory that contains the exported visual studio project from Unity, or the path to its `.sln` file.
     required: true
   configuration:
-    description: The configuration to use when building the visual studio project. Defaults to `Master`.
+    description: The configuration to use when building the visual studio project. Can be `Master`, `Release`, or `Debug`. Defaults to `Master`.
     required: false
     default: 'Master'
+  platform:
+    description: 'The platform to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`. Defaults to the platforms defined in the visual studio project.'
+    required: false
   architecture:
-    description: 'The architecture to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`.'
+    description: 'The platform to use when building the visual studio project. Can be: `x86`, `x64`, `ARM`, or `ARM64`.'
     required: false
-    default: 'ARM64'
-  additional-args:
-    description: Additional arguments to pass to the msbuild command.
-    required: false
+    deprecationMessage: use `platform` instead.
   package-type:
     description: 'The type of package to generate. Can be: `sideload` or `upload`. Defaults to `sideload`.'
     required: false
     default: 'sideload'
   certificate-path:
-    description: 'The path to the certificate to use when packaging the UWP project. Required when `package-type` is `sideload`. Defaults to the Unity generated test certificate.'
+    description: 'The path to the `.pfx` certificate, or a directory to search for one, used to sign the package. Defaults to the Unity generated test certificate.'
+    required: false
+  certificate-password:
+    description: The password for the certificate. Required when providing your own password protected certificate.
+    required: false
+  windows-sdk-version:
+    description: 'The Windows SDK version to build with, such as `10.0.22621.0`. Defaults to the latest Windows SDK installed on the runner.'
+    required: false
+  additional-args:
+    description: Additional arguments to pass to the msbuild command, separated by spaces.
+    required: false
+  store-association-path:
+    description: 'The path to the `Package.StoreAssociation.xml` file to associate the package with your Microsoft Store app. Use with `package-type: upload`.'
     required: false
 outputs:
   executable:
-    description: The path to the generated executable.
+    description: 'The path to the main generated package: the `.appxupload`/`.msixupload` for `upload`, or the bundle or package for `sideload`.'
+  bundles:
+    description: A JSON array of the paths to every generated package and bundle.
   output-directory:
-    description: The path to the output-directory.
+    description: The path to the package output directory.
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
