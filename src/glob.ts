@@ -14,7 +14,7 @@ export interface Globber {
 }
 
 /**
- * The part of @actions/glob these actions use, on glob v13: newline separated patterns, `!` excludes and `#` comments.
+ * The part of @actions/glob these actions use, on glob v14: newline separated patterns, `!` excludes and `#` comments.
  * @actions/glob pins a minimatch with a published advisory, and its fix needs minimatch 11, which @actions/glob can't run on.
  */
 export async function create(patterns: string, options: GlobOptions = {}): Promise<Globber> {

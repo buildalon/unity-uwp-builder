@@ -32222,7 +32222,8 @@ async function getInstalledUwpToolsets(platform) {
     if (!installationPath) {
         return [];
     }
-    const toolsetGlobber = await create(`${installationPath}/MSBuild/Microsoft/VC/*/Application Type/Windows Store/10.0/Platforms/${platform || `*`}/PlatformToolsets/v*`, { matchDirectories: true, implicitDescendants: false });
+    const platformDirectory = !platform ? `*` : platform.toLowerCase() === `x86` ? `Win32` : platform;
+    const toolsetGlobber = await create(`${installationPath}/MSBuild/Microsoft/VC/*/Application Type/Windows Store/10.0/Platforms/${platformDirectory}/PlatformToolsets/v*`, { matchDirectories: true, implicitDescendants: false });
     const toolsetPaths = await toolsetGlobber.glob();
     const toolsets = [...new Set(toolsetPaths.map(toolsetPath => external_path_namespaceObject.basename(toolsetPath)))];
     return toolsets.sort((a, b) => parseInt(a.substring(1)) - parseInt(b.substring(1)));

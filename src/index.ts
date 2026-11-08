@@ -426,7 +426,9 @@ async function getInstalledUwpToolsets(platform: string): Promise<string[]> {
     }
     installationPath = installationPath.trim().split(/\r?\n/)[0];
     if (!installationPath) { return []; }
-    const toolsetGlobber = await glob.create(`${installationPath}/MSBuild/Microsoft/VC/*/Application Type/Windows Store/10.0/Platforms/${platform || `*`}/PlatformToolsets/v*`, { matchDirectories: true, implicitDescendants: false });
+    // msbuild keeps the x86 toolsets under Win32
+    const platformDirectory = !platform ? `*` : platform.toLowerCase() === `x86` ? `Win32` : platform;
+    const toolsetGlobber = await glob.create(`${installationPath}/MSBuild/Microsoft/VC/*/Application Type/Windows Store/10.0/Platforms/${platformDirectory}/PlatformToolsets/v*`, { matchDirectories: true, implicitDescendants: false });
     const toolsetPaths = await toolsetGlobber.glob();
     const toolsets = [...new Set(toolsetPaths.map(toolsetPath => path.basename(toolsetPath)))];
     return toolsets.sort((a, b) => parseInt(a.substring(1)) - parseInt(b.substring(1)));
