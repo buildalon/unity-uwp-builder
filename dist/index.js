@@ -31807,6 +31807,7 @@ async function match(patterns, options) {
 
 
 const main = async () => {
+    var _a;
     try {
         if (process.platform !== `win32`) {
             throw new Error(`This action can only run on Windows runner.`);
@@ -31836,8 +31837,7 @@ const main = async () => {
         catch (error) {
             throw new Error(`Solution file not found: "${solution}"`);
         }
-        const appPackagesPath = external_path_namespaceObject.join(projectPath, `AppPackages`);
-        if (external_fs_namespaceObject.existsSync(appPackagesPath)) {
+        for (const appPackagesPath of await findAppPackagesDirectories(projectPath)) {
             info(`Cleaning AppPackages directory: ${appPackagesPath}...`);
             await external_fs_namespaceObject.promises.rm(appPackagesPath, { recursive: true, force: true });
         }
@@ -31849,9 +31849,9 @@ const main = async () => {
         startGroup(`Found VCXProj files:`);
         vcxprojFiles.forEach(file => info(`  - "${file}"`));
         endGroup();
-        const vcxprojPath = vcxprojFiles.find(file => !external_path_namespaceObject.basename(file).includes(`Il2CppOutputProject`));
+        const vcxprojPath = (_a = vcxprojFiles.find(file => external_fs_namespaceObject.existsSync(external_path_namespaceObject.join(external_path_namespaceObject.dirname(file), `Package.appxmanifest`)))) !== null && _a !== void 0 ? _a : vcxprojFiles.find(file => !external_path_namespaceObject.basename(file).includes(`Il2CppOutputProject`));
         if (!vcxprojPath) {
-            throw new Error(`No suitable VCXProj file found that does not contain 'Il2CppOutputProject'.`);
+            throw new Error(`No app VCXProj file found next to a Package.appxmanifest in: "${projectPath}"`);
         }
         info(`Using VCXProj: ${vcxprojPath}`);
         const configuration = getInput(`configuration`, { required: true });
@@ -31878,14 +31878,20 @@ const main = async () => {
             default:
                 throw new Error(`Invalid package type: "${packageType}"`);
         }
-        const certificatePath = await getCertificatePath(projectPath);
-        buildArgs.push(`/p:GenerateTestCertificate=false`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
-        const certificatePassword = getInput(`certificate-password`);
-        if (certificatePassword) {
-            core_setSecret(certificatePassword);
-            buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
-        }
         const storeAssociationPath = getInput(`store-association-path`);
+        if (packageType === `upload` && storeAssociationPath && !getInput(`certificate-path`).trim()) {
+            info(`Store associated upload with no certificate-path: the package is left unsigned for the Store to sign.`);
+            buildArgs.push(`/p:GenerateTestCertificate=false`, `/p:AppxPackageSigningEnabled=false`);
+        }
+        else {
+            const certificatePath = await getCertificatePath(projectPath);
+            buildArgs.push(`/p:GenerateTestCertificate=false`, `/p:AppxPackageSigningEnabled=true`, `/p:PackageCertificateThumbprint=""`, `/p:PackageCertificateKeyFile="${certificatePath}"`);
+            const certificatePassword = getInput(`certificate-password`, { trimWhitespace: false });
+            if (certificatePassword) {
+                core_setSecret(certificatePassword);
+                buildArgs.push(`/p:PackageCertificatePassword="${certificatePassword}"`);
+            }
+        }
         if (storeAssociationPath) {
             info(`store-association-path: "${storeAssociationPath}"`);
             await copyAndEnsureStoreAssociation(vcxprojPath, storeAssociationPath);
@@ -31973,10 +31979,13 @@ const main = async () => {
     }
 };
 main();
-async function findAppPackagesDirectory(projectPath) {
+async function findAppPackagesDirectories(projectPath) {
     const globber = await create(external_path_namespaceObject.join(projectPath, `**`, `AppPackages`), { matchDirectories: true, implicitDescendants: false });
     const directories = await globber.glob();
-    const outputDirectory = directories.find(directory => external_fs_namespaceObject.statSync(directory).isDirectory());
+    return directories.filter(directory => external_fs_namespaceObject.statSync(directory).isDirectory());
+}
+async function findAppPackagesDirectory(projectPath) {
+    const outputDirectory = (await findAppPackagesDirectories(projectPath))[0];
     if (!outputDirectory) {
         throw new Error(`AppPackages directory not found.`);
     }
@@ -32039,7 +32048,12 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
             const publisher = publisherMatch[1];
             const displayName = reservedNameMatch ? reservedNameMatch[1] : (displayNameMatch ? displayNameMatch[1] : name);
             let appxManifestContent = await external_fs_namespaceObject.promises.readFile(appxManifestPath, `utf8`);
-            appxManifestContent = appxManifestContent.replace(/<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/, (_match, _oldName, _oldPublisher, version) => `<Identity Name="${name}" Publisher="${publisher}" Version="${version}" />`);
+            const identity = findIdentityElement(appxManifestContent);
+            if (!identity) {
+                throw new Error(`No Identity element found in ${appxManifestPath}`);
+            }
+            const updatedIdentity = setXmlAttribute(setXmlAttribute(identity, `Name`, name), `Publisher`, publisher);
+            appxManifestContent = appxManifestContent.replace(identity, () => updatedIdentity);
             appxManifestContent = appxManifestContent.replace(/(<Properties[\s\S]*?<DisplayName>)([\s\S]*?)(<\/DisplayName>)/, (_match, before, _oldDisplayName, after) => `${before}${displayName}${after}`);
             await external_fs_namespaceObject.promises.writeFile(appxManifestPath, appxManifestContent, `utf8`);
             info(`Updated Package.appxmanifest Identity with Name and Publisher from StoreAssociationFile.`);
@@ -32054,9 +32068,9 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
     }
     try {
         const appxManifestContent = await external_fs_namespaceObject.promises.readFile(appxManifestPath, `utf8`);
-        const match = /<Identity Name="([^"]+)" Publisher="([^"]+)" Version="([^"]+)" \/>/.exec(appxManifestContent);
-        if (match) {
-            const version = match[3];
+        const identity = findIdentityElement(appxManifestContent);
+        const version = identity ? getXmlAttribute(identity, `Version`) : undefined;
+        if (version) {
             let storeAssociationContent = await external_fs_namespaceObject.promises.readFile(packageStoreAssociationFilePath, `utf8`);
             storeAssociationContent = storeAssociationContent.replace(/<PackageMaxArchitectureVersion>[^<]+<\/PackageMaxArchitectureVersion>/g, `<PackageMaxArchitectureVersion>${version}</PackageMaxArchitectureVersion>`);
             await external_fs_namespaceObject.promises.writeFile(packageStoreAssociationFilePath, storeAssociationContent, `utf8`);
@@ -32077,18 +32091,18 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
         while ((archMatch = archRegex.exec(storeAssociationContent)) !== null) {
             architectures.push(archMatch[1]);
         }
-        if (architectures.length > 0) {
-            const archMap = {
-                'x86': 'x86',
-                'x64': 'x64',
-                'arm': 'ARM',
-                'arm64': 'ARM64'
-            };
-            const msbuildArchs = [...new Set(architectures.map(arch => archMap[arch.toLowerCase()] || arch))];
+        const archMap = {
+            'x86': 'x86',
+            'x64': 'x64',
+            'arm': 'ARM',
+            'arm64': 'ARM64'
+        };
+        const msbuildArchs = [...new Set(architectures.map(arch => archMap[arch.trim().toLowerCase()]).filter(arch => arch !== undefined))];
+        if (msbuildArchs.length > 0) {
             const appxBundlePlatformsValue = msbuildArchs.join(`|`);
             let vcxprojContent = await external_fs_namespaceObject.promises.readFile(vcxprojPath, `utf8`);
             if (vcxprojContent.includes(`<AppxBundlePlatforms>`)) {
-                vcxprojContent = vcxprojContent.replace(/<AppxBundlePlatforms>[^<]+<\/AppxBundlePlatforms>/, `<AppxBundlePlatforms>${appxBundlePlatformsValue}</AppxBundlePlatforms>`);
+                vcxprojContent = vcxprojContent.replace(/<AppxBundlePlatforms>[^<]*<\/AppxBundlePlatforms>/, `<AppxBundlePlatforms>${appxBundlePlatformsValue}</AppxBundlePlatforms>`);
             }
             else {
                 vcxprojContent = vcxprojContent.replace(/(<PropertyGroup[^>]*>)/, `$1\n    <AppxBundlePlatforms>${appxBundlePlatformsValue}</AppxBundlePlatforms>`);
@@ -32097,7 +32111,7 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
             info(`Set AppxBundlePlatforms in ${vcxprojPath} to: ${appxBundlePlatformsValue}`);
         }
         else {
-            warning(`No <PackageArchitecture> tags found in StoreAssociationFile. AppxBundlePlatforms not set.`);
+            warning(`No x86, x64, ARM or ARM64 <PackageArchitecture> found in StoreAssociationFile. AppxBundlePlatforms not set.`);
         }
     }
     catch (error) {
@@ -32108,6 +32122,25 @@ async function copyAndEnsureStoreAssociation(vcxprojPath, sourcePath) {
         info(await external_fs_namespaceObject.promises.readFile(file, `utf8`));
         endGroup();
     }
+}
+function findIdentityElement(manifest) {
+    var _a;
+    return (_a = /<Identity\b[^>]*>/.exec(manifest)) === null || _a === void 0 ? void 0 : _a[0];
+}
+function getXmlAttribute(element, attribute) {
+    var _a;
+    return (_a = new RegExp(`\\s${attribute}\\s*=\\s*(["'])(.*?)\\1`).exec(element)) === null || _a === void 0 ? void 0 : _a[2];
+}
+function escapeXmlAttribute(value) {
+    return value.replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, `&amp;`).replace(/"/g, `&quot;`).replace(/</g, `&lt;`);
+}
+function setXmlAttribute(element, attribute, value) {
+    const escaped = escapeXmlAttribute(value);
+    const pattern = new RegExp(`(\\s${attribute}\\s*=\\s*)(["']).*?\\2`);
+    if (pattern.test(element)) {
+        return element.replace(pattern, (_match, before) => `${before}"${escaped}"`);
+    }
+    return element.replace(/^<Identity\b/, match => `${match} ${attribute}="${escaped}"`);
 }
 const windowsKitPaths = [
     `C:\\Program Files (x86)\\Windows Kits\\10\\Include`,
@@ -32179,17 +32212,31 @@ async function getPlatformToolsetOverride(projectPath, platform) {
     const projectGlobber = await create(`${projectPath}/**/*.vcxproj`);
     const projectFiles = await projectGlobber.glob();
     const requiredToolsets = new Set();
+    const projectPlatforms = new Set();
     for (const projectFile of projectFiles) {
         const contents = await external_fs_namespaceObject.promises.readFile(projectFile, `utf8`);
         for (const match of contents.matchAll(/<PlatformToolset>\s*(v\d+)\s*<\/PlatformToolset>/g)) {
             requiredToolsets.add(match[1]);
+        }
+        for (const match of contents.matchAll(/<ProjectConfiguration\s+Include="[^"|]*\|([^"]+)"/g)) {
+            projectPlatforms.add(match[1]);
         }
     }
     if (requiredToolsets.size === 0) {
         return undefined;
     }
     core_debug(`Required platform toolsets: ${[...requiredToolsets].join(`, `)}`);
-    const installedToolsets = await getInstalledUwpToolsets(platform);
+    const platforms = platform ? [platform] : [...projectPlatforms];
+    let installedToolsets = [];
+    if (platforms.length === 0) {
+        installedToolsets = await getInstalledUwpToolsets(undefined);
+    }
+    else {
+        for (const [index, buildPlatform] of platforms.entries()) {
+            const toolsets = await getInstalledUwpToolsets(buildPlatform);
+            installedToolsets = index === 0 ? toolsets : installedToolsets.filter(toolset => toolsets.includes(toolset));
+        }
+    }
     if (installedToolsets.length === 0) {
         core_debug(`Unable to determine installed UWP platform toolsets.`);
         return undefined;

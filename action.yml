@@ -35,7 +35,7 @@ inputs:
     description: Additional arguments to pass to the msbuild command, separated by spaces.
     required: false
   store-association-path:
-    description: 'The path to the `Package.StoreAssociation.xml` file to associate the package with your Microsoft Store app. Use with `package-type: upload`.'
+    description: 'The path to the `Package.StoreAssociation.xml` file to associate the package with your Microsoft Store app. Use with `package-type: upload`. Without a `certificate-path`, the upload package is left unsigned for the Store to sign.'
     required: false
 outputs:
   executable:

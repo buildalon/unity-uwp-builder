@@ -68,7 +68,7 @@ jobs:
 
 The deprecated `architecture` input still works; use `platform` instead.
 
-When `store-association-path` is set, the action copies the file next to the app project, matches the `Package.appxmanifest` identity and display name to it, and bundles the architectures it lists.
+When `store-association-path` is set, the action copies the file next to the app project, matches the `Package.appxmanifest` identity and display name to it, and bundles the architectures it lists. An upload with a store association and no `certificate-path` is left unsigned, since the Store signs the packages it publishes.
 
 With Windows SDK `10.0.26100.0` or newer, the action removes the `WindowsMobile` extension SDK reference from the exported projects, since those SDKs no longer ship it. When the exported project asks for a platform toolset the runner's Visual Studio doesn't have, the newest installed UWP toolset is used instead.
 
