@@ -1,21 +1,27 @@
 {
     "compilerOptions": {
         "target": "es2018",
-        "module": "commonjs",
-        "moduleResolution": "node",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "strict": false,
         "noImplicitAny": false,
         "removeComments": true,
         "preserveConstEnums": true,
         "sourceMap": true,
         "forceConsistentCasingInFileNames": true,
+        "rootDir": "src",
         "outDir": "dist",
+        "types": [
+            "node"
+        ],
         "declaration": false,
+        "noEmit": true
     },
     "compileOnSave": true,
     "include": [
         "src/**/*.ts"
     ],
     "exclude": [
-        "src/**/*.spec.ts",
+        "src/**/*.spec.ts"
     ]
 }
