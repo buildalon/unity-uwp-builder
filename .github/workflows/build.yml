@@ -23,6 +23,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(inputs.matrix) }}
       fail-fast: false
+    continue-on-error: ${{ matrix.prerelease == true }}
     runs-on: ${{ matrix.os }}
     # a hung editor, licensing call or IL2CPP build must not hold the matrix
     timeout-minutes: 90
